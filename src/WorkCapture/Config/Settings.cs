@@ -1,0 +1,156 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace WorkCapture.Config;
+
+/// <summary>
+/// Main application settings
+/// </summary>
+public class Settings
+{
+    public CaptureSettings Capture { get; set; } = new();
+    public SyncSettings Sync { get; set; } = new();
+    public StorageSettings Storage { get; set; } = new();
+
+    private static readonly string ConfigDir = Path.Combine(
+        AppDomain.CurrentDomain.BaseDirectory, "config");
+
+    private static readonly string SettingsPath = Path.Combine(ConfigDir, "settings.json");
+
+    public static Settings Load()
+    {
+        try
+        {
+            if (File.Exists(SettingsPath))
+            {
+                var json = File.ReadAllText(SettingsPath);
+                var settings = JsonSerializer.Deserialize<Settings>(json, JsonOptions) ?? new Settings();
+                settings.Storage.Initialize();
+                return settings;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Failed to load settings: {ex.Message}, using defaults");
+        }
+
+        var defaultSettings = new Settings();
+        defaultSettings.Storage.Initialize();
+        return defaultSettings;
+    }
+
+    public void Save()
+    {
+        try
+        {
+            Directory.CreateDirectory(ConfigDir);
+            var json = JsonSerializer.Serialize(this, JsonOptions);
+            File.WriteAllText(SettingsPath, json);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Failed to save settings: {ex.Message}");
+        }
+    }
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+}
+
+/// <summary>
+/// Screenshot capture settings
+/// </summary>
+public class CaptureSettings
+{
+    /// <summary>Seconds between capture checks</summary>
+    public int CaptureIntervalSeconds { get; set; } = 5;
+
+    /// <summary>Capture when window title changes</summary>
+    public bool CaptureOnWindowChange { get; set; } = true;
+
+    /// <summary>Capture when keyboard is active</summary>
+    public bool CaptureOnKeyboardActivity { get; set; } = true;
+
+    /// <summary>Milliseconds to consider keyboard "active"</summary>
+    public int KeyboardActivityWindowMs { get; set; } = 500;
+
+    /// <summary>Image format: webp, png, jpg</summary>
+    public string ScreenshotFormat { get; set; } = "webp";
+
+    /// <summary>Image quality (1-100)</summary>
+    public int ScreenshotQuality { get; set; } = 85;
+
+    /// <summary>Maximum width in pixels (height scales proportionally)</summary>
+    public int MaxScreenshotWidth { get; set; } = 1920;
+
+    /// <summary>Days to keep screenshots before cleanup</summary>
+    public int RetentionDays { get; set; } = 30;
+
+    /// <summary>Hash difference threshold (0-64, lower = stricter)</summary>
+    public int ChangeDetectionThreshold { get; set; } = 5;
+}
+
+/// <summary>
+/// MSP Portal sync settings
+/// </summary>
+public class SyncSettings
+{
+    /// <summary>MSP Portal API base URL</summary>
+    public string ApiUrl { get; set; } = "https://msp.techserverpro.com/api";
+
+    /// <summary>API authentication key</summary>
+    public string ApiKey { get; set; } = "";
+
+    /// <summary>Seconds between sync attempts</summary>
+    public int SyncIntervalSeconds { get; set; } = 60;
+
+    /// <summary>Whether to sync screenshot files (large)</summary>
+    public bool SyncScreenshots { get; set; } = false;
+}
+
+/// <summary>
+/// Local storage settings
+/// </summary>
+public class StorageSettings
+{
+    /// <summary>Base data directory</summary>
+    public string DataDir { get; set; } = "";
+
+    /// <summary>Screenshot storage directory</summary>
+    public string ScreenshotDir { get; set; } = "";
+
+    /// <summary>SQLite database path</summary>
+    public string DatabasePath { get; set; } = "";
+
+    /// <summary>Log file directory</summary>
+    public string LogPath { get; set; } = "";
+
+    /// <summary>Initialize paths if not set</summary>
+    public void Initialize()
+    {
+        if (string.IsNullOrEmpty(DataDir))
+        {
+            DataDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "WorkCapture");
+        }
+
+        if (string.IsNullOrEmpty(ScreenshotDir))
+            ScreenshotDir = Path.Combine(DataDir, "screenshots");
+
+        if (string.IsNullOrEmpty(DatabasePath))
+            DatabasePath = Path.Combine(DataDir, "workcapture.db");
+
+        if (string.IsNullOrEmpty(LogPath))
+            LogPath = Path.Combine(DataDir, "logs");
+
+        // Ensure directories exist
+        Directory.CreateDirectory(DataDir);
+        Directory.CreateDirectory(ScreenshotDir);
+        Directory.CreateDirectory(LogPath);
+    }
+}

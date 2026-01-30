@@ -1,0 +1,117 @@
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# Rider files
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build files
+*.aps
+*.pch
+*.vspscc
+*.vssscc
+*_p.c
+*_h.h
+*.tlb
+*.tmp
+*.tmp_proj
+*_wpftmp.csproj
+
+# NuGet
+*.nupkg
+*.snupkg
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nuget.props
+*.nuget.targets
+
+# Test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.TestResults.xml
+nunit-*.xml
+
+# Project-specific
+publish/
+PublishScripts/
+
+# MSBuild
+*.sln.docstates
+*.userprefs
+
+# JetBrains
+_ReSharper*/
+*.[Rr]e[Ss]harper
+*.DotSettings.user
+
+# NCrunch
+_NCrunch_*
+.*crunch*.local.xml
+nCrunchTemp_*
+
+# Code Coverage
+*.coverage
+*.coveragexml
+
+# Chutzpah
+_Chutzpah*
+
+# Dotcover
+*.dotCover
+
+# SpecFlow
+specflowproject.build.deps
+
+# Windows files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Application data (contains screenshots and database)
+src/WorkCapture/data/
+*.db
+*.db-journal
+
+# Config with API keys (local overrides)
+src/WorkCapture/config/settings.local.json
+
+# Publish output
+publish/

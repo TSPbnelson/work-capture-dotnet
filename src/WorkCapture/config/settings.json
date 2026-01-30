@@ -1,0 +1,22 @@
+{
+  "capture": {
+    "captureIntervalSeconds": 5,
+    "screenshotFormat": "webp",
+    "screenshotQuality": 85,
+    "maxScreenshotWidth": 2000,
+    "changeDetectionThreshold": 10,
+    "keyboardActivityWindowMs": 500,
+    "captureOnKeyboardActivity": true,
+    "retentionDays": 30
+  },
+  "sync": {
+    "apiUrl": "https://msp.techserverpro.com/api",
+    "apiKey": "",
+    "syncIntervalSeconds": 60,
+    "maxRetries": 3
+  },
+  "storage": {
+    "databasePath": "%LOCALAPPDATA%\\WorkCapture\\workcapture.db",
+    "screenshotDir": "%LOCALAPPDATA%\\WorkCapture\\screenshots"
+  }
+}

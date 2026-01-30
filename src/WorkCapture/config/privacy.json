@@ -1,0 +1,43 @@
+{
+  "excluded_processes": [
+    "1Password",
+    "KeePass",
+    "Bitwarden",
+    "LastPass",
+    "mstsc",
+    "vmconnect",
+    "CredentialUIBroker"
+  ],
+  "excluded_window_titles": [
+    ".*password.*",
+    ".*sign.?in.*",
+    ".*log.?in.*",
+    ".*credential.*",
+    ".*bank.*",
+    ".*credit.?card.*",
+    ".*ssn.*",
+    ".*social.?security.*",
+    ".*private.?browsing.*",
+    ".*incognito.*"
+  ],
+  "excluded_urls": [
+    ".*bank.*",
+    ".*paypal.*",
+    ".*chase\\.com.*",
+    ".*wellsfargo\\.com.*",
+    ".*capitalone\\.com.*",
+    ".*accounts\\.google\\.com.*",
+    ".*login\\.microsoftonline\\.com.*"
+  ],
+  "sensitive_keywords": [
+    "password",
+    "login",
+    "signin",
+    "sign-in",
+    "bank",
+    "account",
+    "credit card",
+    "ssn",
+    "social security"
+  ]
+}

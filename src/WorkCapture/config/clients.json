@@ -1,0 +1,64 @@
+{
+  "clients": [
+    {
+      "name": "JNJ Services",
+      "code": "JNJ",
+      "rules": [
+        { "type": "ip_range", "value": "10.100.15.0/24" },
+        { "type": "hostname", "value": ".*jnj.*" },
+        { "type": "hostname", "value": "J-.*" },
+        { "type": "window_title", "value": ".*InTime.*" },
+        { "type": "window_title", "value": ".*JNJ.*" }
+      ]
+    },
+    {
+      "name": "NLT (LearningMatters)",
+      "code": "NLT",
+      "rules": [
+        { "type": "ip_range", "value": "192.168.100.0/24" },
+        { "type": "ip_range", "value": "192.168.44.0/22" },
+        { "type": "ip_range", "value": "192.168.92.0/24" },
+        { "type": "window_title", "value": ".*FortiGate.*" },
+        { "type": "window_title", "value": ".*M370.*" },
+        { "type": "window_title", "value": ".*LearningMatters.*" }
+      ]
+    },
+    {
+      "name": "Hotel McCoy",
+      "code": "HMC",
+      "rules": [
+        { "type": "ip_range", "value": "192.168.10.0/24" },
+        { "type": "url", "value": ".*cloudbeds.*" },
+        { "type": "hostname", "value": ".*HMC.*" },
+        { "type": "window_title", "value": ".*Hotel McCoy.*" }
+      ]
+    },
+    {
+      "name": "EP Builders",
+      "code": "EPB",
+      "rules": [
+        { "type": "hostname", "value": ".*epb.*" },
+        { "type": "window_title", "value": ".*EP Builders.*" }
+      ]
+    },
+    {
+      "name": "Carter Law",
+      "code": "CL",
+      "rules": [
+        { "type": "hostname", "value": ".*carterlaw.*" },
+        { "type": "window_title", "value": ".*Carter Law.*" }
+      ]
+    },
+    {
+      "name": "Tech Server Pro",
+      "code": "TSP",
+      "rules": [
+        { "type": "ip_range", "value": "192.168.1.0/24" },
+        { "type": "hostname", "value": "claudellama" },
+        { "type": "hostname", "value": "rproxy" },
+        { "type": "window_title", "value": ".*MSP.*Autopilot.*" },
+        { "type": "url", "value": ".*techserverpro.*" }
+      ]
+    }
+  ]
+}
