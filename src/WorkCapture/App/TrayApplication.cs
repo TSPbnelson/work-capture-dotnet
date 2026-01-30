@@ -108,6 +108,7 @@ public class TrayApplication : IDisposable
         _contextMenu.Items.Add("Sync Now", null, OnSyncNowClick);
         _contextMenu.Items.Add(new ToolStripSeparator());
         _contextMenu.Items.Add("Show Stats", null, OnShowStatsClick);
+        _contextMenu.Items.Add("Screenshots", null, OnScreenshotsClick);
         _contextMenu.Items.Add(new ToolStripSeparator());
         _contextMenu.Items.Add("Quit", null, OnQuitClick);
 
@@ -379,6 +380,20 @@ public class TrayApplication : IDisposable
     {
         await _syncService.SyncNow();
         Logger.Info("Manual sync triggered");
+    }
+
+    private void OnScreenshotsClick(object? sender, EventArgs e)
+    {
+        var path = _settings.Storage.ScreenshotDir;
+        if (Directory.Exists(path))
+        {
+            System.Diagnostics.Process.Start("explorer.exe", path);
+        }
+        else
+        {
+            MessageBox.Show($"Screenshots folder not found:\n{path}", "Work Capture",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
 
     private void OnShowStatsClick(object? sender, EventArgs e)
