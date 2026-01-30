@@ -5,17 +5,18 @@ using WorkCapture.Data;
 namespace WorkCapture.Detection;
 
 /// <summary>
-/// Detects which client work belongs to based on rules
+/// Detects which client work belongs to based on ITDocs lookup + local rules
 /// </summary>
-public class ClientDetector
+public class ClientDetector : IDisposable
 {
     private readonly List<ClientRule> _clients;
+    private readonly ITDocsLookup? _itdocsLookup;
 
-    public ClientDetector(ClientRulesConfig config)
+    public ClientDetector(ClientRulesConfig config, string? apiUrl = null)
     {
         _clients = config.Clients;
 
-        // Compile all patterns
+        // Compile all patterns for local rules
         foreach (var client in _clients)
         {
             foreach (var rule in client.Rules)
@@ -23,16 +24,93 @@ public class ClientDetector
                 rule.Compile();
             }
         }
+
+        // Initialize ITDocs lookup if API URL provided
+        if (!string.IsNullOrEmpty(apiUrl))
+        {
+            _itdocsLookup = new ITDocsLookup(apiUrl);
+            Logger.Info($"ITDocs lookup enabled: {apiUrl}");
+        }
     }
 
     /// <summary>
     /// Detect client from available information
+    /// Uses ITDocs API first, falls back to local rules
     /// </summary>
     public ClientMatch? Detect(
         string? windowTitle = null,
         string? hostname = null,
         string? url = null,
         string? ipAddress = null)
+    {
+        // Try ITDocs lookup first (async but we block here for simplicity)
+        if (_itdocsLookup != null)
+        {
+            var itdocsMatch = DetectFromITDocsAsync(windowTitle, hostname).GetAwaiter().GetResult();
+            if (itdocsMatch != null)
+            {
+                Logger.Debug($"ITDocs match: {itdocsMatch.ClientCode} ({itdocsMatch.MatchedValue})");
+                return itdocsMatch;
+            }
+        }
+
+        // Fall back to local rules
+        return DetectFromLocalRules(windowTitle, hostname, url, ipAddress);
+    }
+
+    /// <summary>
+    /// Async detection for use in async contexts
+    /// </summary>
+    public async Task<ClientMatch?> DetectAsync(
+        string? windowTitle = null,
+        string? hostname = null,
+        string? url = null,
+        string? ipAddress = null)
+    {
+        // Try ITDocs lookup first
+        if (_itdocsLookup != null)
+        {
+            var itdocsMatch = await DetectFromITDocsAsync(windowTitle, hostname);
+            if (itdocsMatch != null)
+            {
+                Logger.Debug($"ITDocs match: {itdocsMatch.ClientCode} ({itdocsMatch.MatchedValue})");
+                return itdocsMatch;
+            }
+        }
+
+        // Fall back to local rules
+        return DetectFromLocalRules(windowTitle, hostname, url, ipAddress);
+    }
+
+    private async Task<ClientMatch?> DetectFromITDocsAsync(string? windowTitle, string? hostname)
+    {
+        if (_itdocsLookup == null)
+            return null;
+
+        // Try window title first (extracts hostname patterns)
+        if (!string.IsNullOrEmpty(windowTitle))
+        {
+            var match = await _itdocsLookup.LookupByWindowTitle(windowTitle);
+            if (match != null)
+                return match;
+        }
+
+        // Try hostname if available
+        if (!string.IsNullOrEmpty(hostname))
+        {
+            var match = await _itdocsLookup.LookupByHostname(hostname);
+            if (match != null)
+                return match;
+        }
+
+        return null;
+    }
+
+    private ClientMatch? DetectFromLocalRules(
+        string? windowTitle,
+        string? hostname,
+        string? url,
+        string? ipAddress)
     {
         ClientMatch? bestMatch = null;
 
@@ -162,5 +240,10 @@ public class ClientDetector
         {
             return false;
         }
+    }
+
+    public void Dispose()
+    {
+        _itdocsLookup?.Dispose();
     }
 }

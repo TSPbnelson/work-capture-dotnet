@@ -55,7 +55,7 @@ public class TrayApplication : IDisposable
         _activityMonitor = new ActivityMonitor(settings.Capture.KeyboardActivityWindowMs);
 
         var clientRules = ClientRulesConfig.Load();
-        _clientDetector = new ClientDetector(clientRules);
+        _clientDetector = new ClientDetector(clientRules, settings.Sync.ApiUrl);
 
         var privacyRules = PrivacyRulesConfig.Load();
         _privacyFilter = new PrivacyFilter(privacyRules);
@@ -415,6 +415,7 @@ public class TrayApplication : IDisposable
         _contextMenu?.Dispose();
         _screenCapture.Dispose();
         _activityMonitor.Dispose();
+        _clientDetector.Dispose();
         _syncService.Dispose();
         _db.Dispose();
         _cts?.Dispose();
