@@ -12,30 +12,55 @@ public class Settings
     public SyncSettings Sync { get; set; } = new();
     public StorageSettings Storage { get; set; } = new();
 
-    private static readonly string ConfigDir = Path.Combine(
-        AppDomain.CurrentDomain.BaseDirectory, "config");
-
-    private static readonly string SettingsPath = Path.Combine(ConfigDir, "settings.json");
+    private static readonly string DataConfigDir = @"C:\WorkCapture\config";
+    private static readonly string AppConfigDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config");
 
     public static Settings Load()
     {
+        // Check data directory first, then app directory
+        var paths = new[]
+        {
+            Path.Combine(DataConfigDir, "settings.json"),
+            Path.Combine(AppConfigDir, "settings.json")
+        };
+
+        foreach (var path in paths)
+        {
+            if (File.Exists(path))
+            {
+                try
+                {
+                    var json = File.ReadAllText(path);
+                    var settings = JsonSerializer.Deserialize<Settings>(json, JsonOptions) ?? new Settings();
+                    settings.Storage.Initialize();
+                    Logger.Info($"Loaded settings from {path}");
+                    return settings;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning($"Failed to load settings from {path}: {ex.Message}");
+                }
+            }
+        }
+
+        // Create default settings
+        var defaultSettings = new Settings();
+        defaultSettings.Storage.Initialize();
+
+        // Save defaults to data directory
         try
         {
-            if (File.Exists(SettingsPath))
-            {
-                var json = File.ReadAllText(SettingsPath);
-                var settings = JsonSerializer.Deserialize<Settings>(json, JsonOptions) ?? new Settings();
-                settings.Storage.Initialize();
-                return settings;
-            }
+            Directory.CreateDirectory(DataConfigDir);
+            var json = JsonSerializer.Serialize(defaultSettings, JsonOptions);
+            var savePath = Path.Combine(DataConfigDir, "settings.json");
+            File.WriteAllText(savePath, json);
+            Logger.Info($"Created default settings at {savePath}");
         }
         catch (Exception ex)
         {
-            Logger.Warning($"Failed to load settings: {ex.Message}, using defaults");
+            Logger.Warning($"Could not save default settings: {ex.Message}");
         }
 
-        var defaultSettings = new Settings();
-        defaultSettings.Storage.Initialize();
         return defaultSettings;
     }
 
@@ -43,9 +68,9 @@ public class Settings
     {
         try
         {
-            Directory.CreateDirectory(ConfigDir);
+            Directory.CreateDirectory(DataConfigDir);
             var json = JsonSerializer.Serialize(this, JsonOptions);
-            File.WriteAllText(SettingsPath, json);
+            File.WriteAllText(Path.Combine(DataConfigDir, "settings.json"), json);
         }
         catch (Exception ex)
         {

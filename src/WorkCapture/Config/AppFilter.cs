@@ -71,7 +71,49 @@ public class AppFilterConfig
             }
         }
 
-        Logger.Info("No app filter config found, capturing all apps");
-        return new AppFilterConfig { Enabled = false };
+        // Create default config file
+        var defaultConfig = CreateDefault();
+        var configPath = @"C:\WorkCapture\config\apps.json";
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
+            var json = JsonSerializer.Serialize(defaultConfig, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(configPath, json);
+            Logger.Info($"Created default app filter at {configPath}");
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Could not create default app filter: {ex.Message}");
+        }
+
+        return defaultConfig;
+    }
+
+    /// <summary>
+    /// Create default app filter configuration
+    /// </summary>
+    public static AppFilterConfig CreateDefault()
+    {
+        return new AppFilterConfig
+        {
+            Enabled = true,
+            RequireMaximized = false,
+            AllowedProcesses = new List<string>
+            {
+                "chrome",
+                "msedge",
+                "firefox",
+                "mstsc",
+                "strwinclt",
+                "putty",
+                "winscp",
+                "code",
+                "devenv",
+                "ssms",
+                "WSM",
+                "powershell",
+                "WindowsTerminal"
+            }
+        };
     }
 }
