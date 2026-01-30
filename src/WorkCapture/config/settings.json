@@ -16,7 +16,7 @@
     "maxRetries": 3
   },
   "storage": {
-    "databasePath": "%LOCALAPPDATA%\\WorkCapture\\workcapture.db",
-    "screenshotDir": "%LOCALAPPDATA%\\WorkCapture\\screenshots"
+    "databasePath": "C:\\WorkCapture\\workcapture.db",
+    "screenshotDir": "C:\\WorkCapture\\screenshots"
   }
 }

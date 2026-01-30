@@ -46,9 +46,7 @@ public class AppFilterConfig
     {
         var paths = new[]
         {
-            Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "WorkCapture", "config", "apps.json"),
+            @"C:\WorkCapture\config\apps.json",
             Path.Combine(AppContext.BaseDirectory, "config", "apps.json")
         };
 

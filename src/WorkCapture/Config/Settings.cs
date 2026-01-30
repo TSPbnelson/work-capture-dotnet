@@ -134,9 +134,8 @@ public class StorageSettings
     {
         if (string.IsNullOrEmpty(DataDir))
         {
-            DataDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "WorkCapture");
+            // Use C:\WorkCapture for all data
+            DataDir = @"C:\WorkCapture";
         }
 
         if (string.IsNullOrEmpty(ScreenshotDir))
