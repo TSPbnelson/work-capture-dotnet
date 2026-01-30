@@ -42,9 +42,9 @@ public class ApiSyncService : IDisposable
     /// </summary>
     public void Start()
     {
-        if (string.IsNullOrEmpty(_settings.ApiKey))
+        if (string.IsNullOrEmpty(_settings.ApiUrl))
         {
-            Logger.Warning("No API key configured - sync disabled");
+            Logger.Warning("No API URL configured - sync disabled");
             return;
         }
 
