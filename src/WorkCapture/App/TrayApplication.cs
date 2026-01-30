@@ -24,6 +24,7 @@ public class TrayApplication : IDisposable
     private readonly ChangeDetector _changeDetector;
     private readonly AdaptiveCaptureRate _adaptiveRate;
     private readonly ApiSyncService _syncService;
+    private readonly AppFilterConfig _appFilter;
 
     // Tray
     private NotifyIcon? _trayIcon;
@@ -71,6 +72,8 @@ public class TrayApplication : IDisposable
             maxInterval: 30.0);
 
         _syncService = new ApiSyncService(_db, settings.Sync);
+
+        _appFilter = AppFilterConfig.Load();
 
         // Load last hash for continuity
         var lastHash = _db.GetLastImageHash();
@@ -220,6 +223,13 @@ public class TrayApplication : IDisposable
     {
         // Get window info
         var windowInfo = _windowExtractor.GetActiveWindowInfo();
+
+        // Check app filter - only capture allowed apps
+        if (!_appFilter.IsAllowed(windowInfo.ProcessName))
+        {
+            Logger.Debug($"App filtered: {windowInfo.ProcessName}");
+            return; // Don't count as skip, just ignore
+        }
 
         // Check privacy filter
         var (excluded, reason) = _privacyFilter.ShouldExclude(

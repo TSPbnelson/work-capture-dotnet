@@ -1,0 +1,35 @@
+{
+  "description": "Only capture when these apps are active. Empty list = capture all apps.",
+  "enabled": true,
+  "requireMaximized": false,
+  "allowedProcesses": [
+    "chrome",
+    "msedge",
+    "firefox",
+    "mstsc",
+    "strwinclt",
+    "putty",
+    "winscp",
+    "code",
+    "devenv",
+    "ssms",
+    "WSM",
+    "powershell",
+    "WindowsTerminal"
+  ],
+  "allowedProcessDescriptions": {
+    "chrome": "Google Chrome",
+    "msedge": "Microsoft Edge",
+    "firefox": "Mozilla Firefox",
+    "mstsc": "Remote Desktop Connection",
+    "strwinclt": "Splashtop Remote",
+    "putty": "PuTTY SSH Client",
+    "winscp": "WinSCP File Transfer",
+    "code": "VS Code",
+    "devenv": "Visual Studio",
+    "ssms": "SQL Server Management Studio",
+    "WSM": "WatchGuard System Manager",
+    "powershell": "PowerShell",
+    "WindowsTerminal": "Windows Terminal"
+  }
+}
