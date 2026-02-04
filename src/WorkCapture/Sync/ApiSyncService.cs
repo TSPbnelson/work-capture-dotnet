@@ -163,7 +163,11 @@ public class ApiSyncService : IDisposable
                 end_time = session.EndTime.ToString("O"),
                 duration_minutes = session.DurationMinutes,
                 capture_count = session.CaptureCount,
-                source = "work_capture_tool"
+                source = "work_capture_tool",
+                // Vision analysis data
+                vision_client_code = session.VisionClientCode,
+                vision_confidence = session.VisionConfidence,
+                vision_description = session.VisionDescription
             };
 
             var response = await _client.PostAsJsonAsync("/work-capture/sessions", payload);
@@ -195,7 +199,10 @@ public class ApiSyncService : IDisposable
                 end_time = session.EndTime.ToString("O"),
                 duration_minutes = session.DurationMinutes,
                 capture_count = session.CaptureCount,
-                source = "work_capture_tool"
+                source = "work_capture_tool",
+                vision_client_code = session.VisionClientCode,
+                vision_confidence = session.VisionConfidence,
+                vision_description = session.VisionDescription
             }));
         }
     }
@@ -302,6 +309,11 @@ public class SessionData
     public DateTime EndTime { get; set; }
     public int DurationMinutes { get; set; }
     public int CaptureCount { get; set; }
+
+    // Vision analysis data
+    public string? VisionClientCode { get; set; }
+    public double VisionConfidence { get; set; }
+    public string? VisionDescription { get; set; }
 }
 
 /// <summary>

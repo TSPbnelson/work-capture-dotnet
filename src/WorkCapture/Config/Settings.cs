@@ -11,6 +11,7 @@ public class Settings
     public CaptureSettings Capture { get; set; } = new();
     public SyncSettings Sync { get; set; } = new();
     public StorageSettings Storage { get; set; } = new();
+    public VisionSettings Vision { get; set; } = new();
 
     private static readonly string DataConfigDir = @"C:\WorkCapture\config";
     private static readonly string AppConfigDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config");
@@ -177,4 +178,31 @@ public class StorageSettings
         Directory.CreateDirectory(ScreenshotDir);
         Directory.CreateDirectory(LogPath);
     }
+}
+
+/// <summary>
+/// Vision analysis settings
+/// </summary>
+public class VisionSettings
+{
+    /// <summary>Enable vision analysis</summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>Vision analysis service URL</summary>
+    public string ServiceUrl { get; set; } = "http://192.168.1.16:8001";
+
+    /// <summary>Request timeout in seconds</summary>
+    public int TimeoutSeconds { get; set; } = 30;
+
+    /// <summary>Analyze every Nth capture (1 = all, 5 = every 5th)</summary>
+    public int AnalyzeEveryNth { get; set; } = 1;
+
+    /// <summary>Skip analysis if previous analysis confidence was high</summary>
+    public bool SkipHighConfidenceRepeats { get; set; } = true;
+
+    /// <summary>Minimum confidence threshold for skipping repeats</summary>
+    public double HighConfidenceThreshold { get; set; } = 0.85;
+
+    /// <summary>Run analysis asynchronously (don't block capture loop)</summary>
+    public bool AsyncAnalysis { get; set; } = true;
 }

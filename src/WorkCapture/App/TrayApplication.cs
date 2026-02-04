@@ -4,6 +4,7 @@ using WorkCapture.Config;
 using WorkCapture.Data;
 using WorkCapture.Detection;
 using WorkCapture.Sync;
+using WorkCapture.Vision;
 
 namespace WorkCapture.App;
 
@@ -25,6 +26,11 @@ public class TrayApplication : IDisposable
     private readonly AdaptiveCaptureRate _adaptiveRate;
     private readonly ApiSyncService _syncService;
     private readonly AppFilterConfig _appFilter;
+
+    // Vision components
+    private readonly VisionAnalysisClient? _visionClient;
+    private readonly StepSummaryAccumulator _stepAccumulator;
+    private int _visionAnalysisCount;
 
     // Tray
     private NotifyIcon? _trayIcon;
@@ -74,6 +80,18 @@ public class TrayApplication : IDisposable
         _syncService = new ApiSyncService(_db, settings.Sync);
 
         _appFilter = AppFilterConfig.Load();
+
+        // Initialize vision components
+        _stepAccumulator = new StepSummaryAccumulator();
+        if (settings.Vision.Enabled)
+        {
+            _visionClient = new VisionAnalysisClient(settings.Vision);
+            Logger.Info($"Vision analysis enabled, service: {settings.Vision.ServiceUrl}");
+        }
+        else
+        {
+            Logger.Info("Vision analysis disabled");
+        }
 
         // Load last hash for continuity
         var lastHash = _db.GetLastImageHash();
@@ -320,8 +338,77 @@ public class TrayApplication : IDisposable
 
         _captureCount++;
 
+        // Vision analysis (async, don't block capture loop)
+        if (_visionClient != null && screenshotPath != null && captureType == "full")
+        {
+            _visionAnalysisCount++;
+
+            // Check if we should analyze this capture
+            bool shouldAnalyze = _visionAnalysisCount % _settings.Vision.AnalyzeEveryNth == 0;
+
+            if (shouldAnalyze)
+            {
+                if (_settings.Vision.AsyncAnalysis)
+                {
+                    // Fire and forget - don't block capture loop
+                    _ = AnalyzeScreenshotAsync(evt.Id, screenshotPath, windowInfo);
+                }
+                else
+                {
+                    // Synchronous analysis (blocks capture loop)
+                    AnalyzeScreenshotAsync(evt.Id, screenshotPath, windowInfo).Wait();
+                }
+            }
+        }
+
         Logger.Debug($"Captured: {captureType} | {windowInfo.ProcessName} | " +
                      $"Client: {clientMatch?.ClientCode ?? "Unknown"} | Reason: {captureReason}");
+    }
+
+    /// <summary>
+    /// Analyze screenshot using vision service
+    /// </summary>
+    private async Task AnalyzeScreenshotAsync(long eventId, string screenshotPath, WindowInfo windowInfo)
+    {
+        if (_visionClient == null) return;
+
+        try
+        {
+            var result = await _visionClient.AnalyzeAsync(
+                screenshotPath,
+                windowTitle: windowInfo.Title,
+                processName: windowInfo.ProcessName,
+                hostname: windowInfo.Hostname,
+                url: windowInfo.Url);
+
+            if (result.Success)
+            {
+                // Update event with vision data
+                _db.UpdateEventVisionData(
+                    eventId,
+                    result.ClientCode,
+                    result.Confidence,
+                    result.WorkDescription,
+                    result.Model);
+
+                // Accumulate step summary
+                _stepAccumulator.AddStep(
+                    result.ClientCode,
+                    result.StepSummary,
+                    result.ActivityType,
+                    DateTime.Now);
+
+                Logger.Debug($"Vision: {result.ClientCode} ({result.Confidence:F2}) - {result.StepSummary}");
+            }
+            else
+            {
+                Logger.Debug($"Vision analysis failed: {result.Error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Vision analysis error: {ex.Message}");
+        }
     }
 
     private void ForceCapture()
@@ -417,8 +504,19 @@ public class TrayApplication : IDisposable
             $"Today's events: {dbStats.TodayEvents}\n" +
             $"Unsynced: {dbStats.UnsyncedEvents}\n" +
             $"Sync pending: {syncStatus.PendingQueue}\n" +
-            $"Activity level: {_adaptiveRate.ActivityLevel:P0}\n\n" +
-            $"Clients today:\n" +
+            $"Activity level: {_adaptiveRate.ActivityLevel:P0}\n";
+
+        // Add vision stats if available
+        if (_visionClient != null)
+        {
+            var visionStats = _visionClient.GetStats();
+            message += $"\nVision analysis:\n" +
+                       $"  Requests: {visionStats.TotalRequests}\n" +
+                       $"  Success rate: {visionStats.SuccessRatePercent:F0}%\n" +
+                       $"  Avg time: {visionStats.AverageTimeMs}ms\n";
+        }
+
+        message += $"\nClients today:\n" +
             string.Join("\n", dbStats.TodayByClient.Select(kv => $"  {kv.Key}: {kv.Value}"));
 
         MessageBox.Show(message, "Work Capture Stats", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -442,6 +540,7 @@ public class TrayApplication : IDisposable
         _activityMonitor.Dispose();
         _clientDetector.Dispose();
         _syncService.Dispose();
+        _visionClient?.Dispose();
         _db.Dispose();
         _cts?.Dispose();
     }

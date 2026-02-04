@@ -75,7 +75,46 @@ public class Database : IDisposable
         ";
         cmd.ExecuteNonQuery();
 
+        // Add vision columns if they don't exist (migration)
+        MigrateVisionColumns(conn);
+
         Logger.Info("Database initialized");
+    }
+
+    private void MigrateVisionColumns(SqliteConnection conn)
+    {
+        // Check if vision columns exist
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "PRAGMA table_info(capture_events)";
+
+        var columns = new HashSet<string>();
+        using (var reader = cmd.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                columns.Add(reader.GetString(1));
+            }
+        }
+
+        // Add vision columns if missing
+        var newColumns = new[]
+        {
+            ("vision_client_code", "TEXT"),
+            ("vision_confidence", "REAL"),
+            ("vision_description", "TEXT"),
+            ("vision_model", "TEXT")
+        };
+
+        foreach (var (column, type) in newColumns)
+        {
+            if (!columns.Contains(column))
+            {
+                using var alterCmd = conn.CreateCommand();
+                alterCmd.CommandText = $"ALTER TABLE capture_events ADD COLUMN {column} {type}";
+                alterCmd.ExecuteNonQuery();
+                Logger.Info($"Added column: {column}");
+            }
+        }
     }
 
     public long InsertCaptureEvent(CaptureEvent evt)
@@ -335,6 +374,36 @@ public class Database : IDisposable
         ";
         cmd.Parameters.AddWithValue("@error", error);
         cmd.Parameters.AddWithValue("@id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Update capture event with vision analysis results
+    /// </summary>
+    public void UpdateEventVisionData(
+        long eventId,
+        string? clientCode,
+        double confidence,
+        string? description,
+        string? model)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            UPDATE capture_events SET
+                vision_client_code = @clientCode,
+                vision_confidence = @confidence,
+                vision_description = @description,
+                vision_model = @model
+            WHERE id = @id
+        ";
+        cmd.Parameters.AddWithValue("@clientCode", clientCode ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@confidence", confidence);
+        cmd.Parameters.AddWithValue("@description", description ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@model", model ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@id", eventId);
         cmd.ExecuteNonQuery();
     }
 

@@ -21,6 +21,12 @@ public class CaptureEvent
     public bool MouseActive { get; set; }
     public bool Synced { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    // Vision analysis data (populated asynchronously)
+    public string? VisionClientCode { get; set; }
+    public double VisionConfidence { get; set; }
+    public string? VisionDescription { get; set; }
+    public string? VisionModel { get; set; }
 }
 
 /// <summary>
