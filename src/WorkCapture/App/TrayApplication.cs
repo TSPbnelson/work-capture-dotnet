@@ -4,6 +4,7 @@ using WorkCapture.Config;
 using WorkCapture.Data;
 using WorkCapture.Detection;
 using WorkCapture.Sync;
+using WorkCapture.Updater;
 using WorkCapture.Vision;
 
 namespace WorkCapture.App;
@@ -31,6 +32,9 @@ public class TrayApplication : IDisposable
     private readonly VisionAnalysisClient? _visionClient;
     private readonly StepSummaryAccumulator _stepAccumulator;
     private int _visionAnalysisCount;
+
+    // Updater
+    private readonly AppUpdater _updater = new();
 
     // Tray
     private NotifyIcon? _trayIcon;
@@ -130,6 +134,11 @@ public class TrayApplication : IDisposable
         _contextMenu.Items.Add(new ToolStripSeparator());
         _contextMenu.Items.Add("Show Stats", null, OnShowStatsClick);
         _contextMenu.Items.Add("Screenshots", null, OnScreenshotsClick);
+        _contextMenu.Items.Add(new ToolStripSeparator());
+        _contextMenu.Items.Add("Update App", null, OnUpdateClick);
+        var startupItem = new ToolStripMenuItem("Start with Windows", null, OnStartupToggleClick);
+        startupItem.Checked = AppUpdater.IsRegisteredForStartup();
+        _contextMenu.Items.Add(startupItem);
         _contextMenu.Items.Add(new ToolStripSeparator());
         _contextMenu.Items.Add("Quit", null, OnQuitClick);
 
@@ -530,6 +539,68 @@ public class TrayApplication : IDisposable
         MessageBox.Show(message, "Work Capture Stats", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
+    private async void OnUpdateClick(object? sender, EventArgs e)
+    {
+        _trayIcon!.BalloonTipTitle = "Work Capture";
+        _trayIcon.BalloonTipText = "Checking for updates...";
+        _trayIcon.ShowBalloonTip(2000);
+
+        var release = await _updater.CheckForUpdate();
+
+        if (release == null)
+        {
+            MessageBox.Show("Could not check for updates. Check your internet connection.",
+                "Update", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        if (!release.UpdateAvailable)
+        {
+            MessageBox.Show($"You're on the latest version (v{release.CurrentVersion}).",
+                "Update", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var result = MessageBox.Show(
+            $"Update available!\n\nCurrent: v{release.CurrentVersion}\nLatest: v{release.LatestVersion}\n\nDownload and install?",
+            "Update Available", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+        if (result != DialogResult.Yes) return;
+
+        var success = await _updater.DownloadAndInstall(release, msg =>
+        {
+            _trayIcon.BalloonTipText = msg;
+            _trayIcon.ShowBalloonTip(3000);
+        });
+
+        if (success)
+        {
+            // Exit so the update script can replace files and relaunch
+            Stop();
+            _trayIcon.Visible = false;
+            Application.Exit();
+        }
+    }
+
+    private void OnStartupToggleClick(object? sender, EventArgs e)
+    {
+        if (sender is ToolStripMenuItem item)
+        {
+            if (item.Checked)
+            {
+                AppUpdater.UnregisterStartup();
+                item.Checked = false;
+                Logger.Info("Removed from Windows startup");
+            }
+            else
+            {
+                AppUpdater.RegisterStartup();
+                item.Checked = true;
+                Logger.Info("Added to Windows startup");
+            }
+        }
+    }
+
     private void OnQuitClick(object? sender, EventArgs e)
     {
         Stop();
@@ -549,6 +620,7 @@ public class TrayApplication : IDisposable
         _clientDetector.Dispose();
         _syncService.Dispose();
         _visionClient?.Dispose();
+        _updater.Dispose();
         _db.Dispose();
         _cts?.Dispose();
     }
