@@ -239,6 +239,14 @@ public class TrayApplication : IDisposable
 
     private void DoCaptureCheck()
     {
+        // Skip capture if user is idle
+        var idleTimeout = _settings.Capture.IdleTimeoutSeconds;
+        if (idleTimeout > 0 && _activityMonitor.IdleSeconds > idleTimeout)
+        {
+            Logger.Debug($"Idle ({_activityMonitor.IdleSeconds:F0}s), skipping capture");
+            return;
+        }
+
         // Get window info
         var windowInfo = _windowExtractor.GetActiveWindowInfo();
 

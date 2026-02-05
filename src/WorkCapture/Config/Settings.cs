@@ -118,6 +118,9 @@ public class CaptureSettings
 
     /// <summary>Hash difference threshold (0-64, lower = stricter)</summary>
     public int ChangeDetectionThreshold { get; set; } = 5;
+
+    /// <summary>Seconds of inactivity before pausing captures (0 = disabled)</summary>
+    public int IdleTimeoutSeconds { get; set; } = 60;
 }
 
 /// <summary>
