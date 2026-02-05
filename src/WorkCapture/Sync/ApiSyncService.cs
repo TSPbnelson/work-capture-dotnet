@@ -164,6 +164,7 @@ public class ApiSyncService : IDisposable
                 duration_minutes = session.DurationMinutes,
                 capture_count = session.CaptureCount,
                 source = "work_capture_tool",
+                machine_name = Environment.MachineName,
                 // Vision analysis data
                 vision_client_code = session.VisionClientCode,
                 vision_confidence = session.VisionConfidence,
@@ -200,6 +201,7 @@ public class ApiSyncService : IDisposable
                 duration_minutes = session.DurationMinutes,
                 capture_count = session.CaptureCount,
                 source = "work_capture_tool",
+                machine_name = Environment.MachineName,
                 vision_client_code = session.VisionClientCode,
                 vision_confidence = session.VisionConfidence,
                 vision_description = session.VisionDescription

@@ -191,8 +191,8 @@ public class VisionSettings
     /// <summary>Vision analysis service URL</summary>
     public string ServiceUrl { get; set; } = "http://192.168.1.16:8001";
 
-    /// <summary>Request timeout in seconds</summary>
-    public int TimeoutSeconds { get; set; } = 30;
+    /// <summary>Request timeout in seconds (45s to accommodate Ollama fallback)</summary>
+    public int TimeoutSeconds { get; set; } = 45;
 
     /// <summary>Analyze every Nth capture (1 = all, 5 = every 5th)</summary>
     public int AnalyzeEveryNth { get; set; } = 1;
