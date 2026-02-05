@@ -34,7 +34,7 @@ public class TrayApplication : IDisposable
     private int _visionAnalysisCount;
 
     // Updater
-    private readonly AppUpdater _updater = new();
+    private readonly AppUpdater _updater;
 
     // Tray
     private NotifyIcon? _trayIcon;
@@ -84,6 +84,9 @@ public class TrayApplication : IDisposable
         _syncService = new ApiSyncService(_db, settings.Sync);
 
         _appFilter = AppFilterConfig.Load();
+
+        // Initialize updater with GitHub token
+        _updater = new AppUpdater(settings.Update.GitHubToken);
 
         // Initialize vision components
         _stepAccumulator = new StepSummaryAccumulator();

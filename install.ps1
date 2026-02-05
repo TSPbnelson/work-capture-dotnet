@@ -1,6 +1,15 @@
 # WorkCapture Installer
 # Downloads latest release, installs to C:\WorkCapture, adds to startup
-# Run: powershell -ExecutionPolicy Bypass -File install.ps1
+#
+# Usage:
+#   powershell -ExecutionPolicy Bypass -File install.ps1 -Token "ghp_xxxxx"
+#
+# The GitHub token needs 'repo' scope for private repo access.
+# Token is saved to config for future in-app updates.
+
+param(
+    [string]$Token = ""
+)
 
 $ErrorActionPreference = "Stop"
 $InstallDir = "C:\WorkCapture"
@@ -13,6 +22,24 @@ Write-Host "  Tech Server Pro" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
+# Prompt for token if not provided
+if (-not $Token) {
+    Write-Host "This is a private GitHub repo. A personal access token is required." -ForegroundColor Yellow
+    Write-Host "Create one at: https://github.com/settings/tokens" -ForegroundColor Gray
+    Write-Host "Required scope: repo (Full control of private repositories)" -ForegroundColor Gray
+    Write-Host ""
+    $Token = Read-Host "Enter GitHub token"
+    if (-not $Token) {
+        Write-Host "ERROR: Token is required for private repo access." -ForegroundColor Red
+        exit 1
+    }
+}
+
+$headers = @{
+    "User-Agent" = "WorkCapture-Installer"
+    "Authorization" = "Bearer $Token"
+}
+
 # Check if running
 $running = Get-Process -Name "WorkCapture" -ErrorAction SilentlyContinue
 if ($running) {
@@ -23,7 +50,7 @@ if ($running) {
 
 # Get latest release from GitHub
 Write-Host "Checking for latest release..." -ForegroundColor White
-$release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -Headers @{ "User-Agent" = "WorkCapture-Installer" }
+$release = Invoke-RestMethod -Uri "https://api.github.com/repos/$Repo/releases/latest" -Headers $headers
 $version = $release.tag_name
 $asset = $release.assets | Where-Object { $_.name -like "*win-x64*.zip" } | Select-Object -First 1
 
@@ -42,7 +69,11 @@ New-Item -ItemType Directory -Path $tempDir | Out-Null
 
 $zipPath = "$tempDir\$($asset.name)"
 Write-Host "Downloading..." -ForegroundColor White
-Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $zipPath
+Invoke-WebRequest -Uri $asset.url -Headers @{
+    "User-Agent" = "WorkCapture-Installer"
+    "Authorization" = "Bearer $Token"
+    "Accept" = "application/octet-stream"
+} -OutFile $zipPath
 Write-Host "Downloaded: $zipPath" -ForegroundColor Green
 
 # Extract
@@ -92,6 +123,9 @@ if (-not (Test-Path "$ConfigDir\settings.json")) {
     "timeout_seconds": 45,
     "analyze_every_nth": 1,
     "async_analysis": true
+  },
+  "update": {
+    "github_token": "$Token"
   }
 }
 "@ | Set-Content "$ConfigDir\settings.json" -Encoding UTF8

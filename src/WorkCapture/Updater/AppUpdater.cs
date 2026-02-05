@@ -16,10 +16,15 @@ public class AppUpdater : IDisposable
     private readonly HttpClient _client;
     private readonly string _currentVersion;
 
-    public AppUpdater()
+    public AppUpdater(string githubToken = "")
     {
         _client = new HttpClient();
         _client.DefaultRequestHeaders.Add("User-Agent", "WorkCapture-Updater");
+
+        if (!string.IsNullOrEmpty(githubToken))
+        {
+            _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {githubToken}");
+        }
 
         // Get current version from assembly
         var asm = typeof(AppUpdater).Assembly.GetName();
@@ -48,12 +53,13 @@ public class AppUpdater : IDisposable
                 a.Name.Contains("win-x64", StringComparison.OrdinalIgnoreCase) &&
                 a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
 
+            // Use API URL for private repos (requires Accept: application/octet-stream)
             return new ReleaseInfo
             {
                 CurrentVersion = _currentVersion,
                 LatestVersion = latestVersion,
                 UpdateAvailable = latest > current,
-                DownloadUrl = asset?.BrowserDownloadUrl ?? "",
+                DownloadUrl = asset?.Url ?? "",
                 ReleaseNotes = release.Body ?? "",
                 AssetName = asset?.Name ?? ""
             };
@@ -90,7 +96,11 @@ public class AppUpdater : IDisposable
             onProgress?.Invoke("Downloading update...");
             Logger.Info($"Downloading {release.DownloadUrl}");
 
-            using (var response = await _client.GetAsync(release.DownloadUrl))
+            // Use Accept: application/octet-stream for private repo asset download
+            using var request = new HttpRequestMessage(HttpMethod.Get, release.DownloadUrl);
+            request.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/octet-stream"));
+
+            using (var response = await _client.SendAsync(request))
             {
                 response.EnsureSuccessStatusCode();
                 using var fs = File.Create(zipPath);
@@ -234,6 +244,9 @@ public class GitHubAsset
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = "";
+
+    [JsonPropertyName("url")]
+    public string Url { get; set; } = "";
 
     [JsonPropertyName("browser_download_url")]
     public string BrowserDownloadUrl { get; set; } = "";

@@ -12,6 +12,7 @@ public class Settings
     public SyncSettings Sync { get; set; } = new();
     public StorageSettings Storage { get; set; } = new();
     public VisionSettings Vision { get; set; } = new();
+    public UpdateSettings Update { get; set; } = new();
 
     private static readonly string DataConfigDir = @"C:\WorkCapture\config";
     private static readonly string AppConfigDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config");
@@ -208,4 +209,13 @@ public class VisionSettings
 
     /// <summary>Run analysis asynchronously (don't block capture loop)</summary>
     public bool AsyncAnalysis { get; set; } = true;
+}
+
+/// <summary>
+/// Auto-update settings
+/// </summary>
+public class UpdateSettings
+{
+    /// <summary>GitHub personal access token for private repo access</summary>
+    public string GitHubToken { get; set; } = "";
 }
