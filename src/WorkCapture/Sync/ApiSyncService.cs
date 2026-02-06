@@ -249,6 +249,15 @@ public class ApiSyncService : IDisposable
                 current!.EndTime = evt.Timestamp;
                 current.CaptureCount++;
             }
+
+            // Keep the highest-confidence vision result for the session
+            if (!string.IsNullOrEmpty(evt.VisionClientCode) &&
+                evt.VisionConfidence > (current!.VisionConfidence))
+            {
+                current.VisionClientCode = evt.VisionClientCode;
+                current.VisionConfidence = evt.VisionConfidence;
+                current.VisionDescription = evt.VisionDescription;
+            }
         }
 
         if (current != null)

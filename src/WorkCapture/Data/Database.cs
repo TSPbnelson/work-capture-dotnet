@@ -407,24 +407,69 @@ public class Database : IDisposable
         cmd.ExecuteNonQuery();
     }
 
-    private static CaptureEvent ReadCaptureEvent(SqliteDataReader reader) => new()
+    private static CaptureEvent ReadCaptureEvent(SqliteDataReader reader)
     {
-        Id = reader.GetInt64(0),
-        Timestamp = DateTime.Parse(reader.GetString(1)),
-        WindowTitle = reader.IsDBNull(2) ? null : reader.GetString(2),
-        ProcessName = reader.IsDBNull(3) ? null : reader.GetString(3),
-        Url = reader.IsDBNull(4) ? null : reader.GetString(4),
-        Hostname = reader.IsDBNull(5) ? null : reader.GetString(5),
-        ClientCode = reader.IsDBNull(6) ? null : reader.GetString(6),
-        ClientConfidence = reader.IsDBNull(7) ? 0 : reader.GetDouble(7),
-        CaptureType = reader.IsDBNull(8) ? "full" : reader.GetString(8),
-        CaptureReason = reader.IsDBNull(9) ? "timer" : reader.GetString(9),
-        ScreenshotPath = reader.IsDBNull(10) ? null : reader.GetString(10),
-        ImageHash = reader.IsDBNull(11) ? null : reader.GetString(11),
-        KeyboardActive = reader.GetInt32(12) == 1,
-        MouseActive = reader.GetInt32(13) == 1,
-        Synced = reader.GetInt32(14) == 1,
-    };
+        var evt = new CaptureEvent
+        {
+            Id = reader.GetInt64(reader.GetOrdinal("id")),
+            Timestamp = DateTime.Parse(reader.GetString(reader.GetOrdinal("timestamp"))),
+            WindowTitle = GetStringOrNull(reader, "window_title"),
+            ProcessName = GetStringOrNull(reader, "process_name"),
+            Url = GetStringOrNull(reader, "url"),
+            Hostname = GetStringOrNull(reader, "hostname"),
+            ClientCode = GetStringOrNull(reader, "client_code"),
+            ClientConfidence = GetDoubleOrDefault(reader, "client_confidence"),
+            CaptureType = GetStringOrNull(reader, "capture_type") ?? "full",
+            CaptureReason = GetStringOrNull(reader, "capture_reason") ?? "timer",
+            ScreenshotPath = GetStringOrNull(reader, "screenshot_path"),
+            ImageHash = GetStringOrNull(reader, "image_hash"),
+            KeyboardActive = GetIntOrDefault(reader, "keyboard_active") == 1,
+            MouseActive = GetIntOrDefault(reader, "mouse_active") == 1,
+            Synced = GetIntOrDefault(reader, "synced") == 1,
+        };
+
+        // Read vision columns (may not exist in older databases)
+        try
+        {
+            evt.VisionClientCode = GetStringOrNull(reader, "vision_client_code");
+            evt.VisionConfidence = GetDoubleOrDefault(reader, "vision_confidence");
+            evt.VisionDescription = GetStringOrNull(reader, "vision_description");
+            evt.VisionModel = GetStringOrNull(reader, "vision_model");
+        }
+        catch { /* Vision columns may not exist yet */ }
+
+        return evt;
+    }
+
+    private static string? GetStringOrNull(SqliteDataReader reader, string column)
+    {
+        try
+        {
+            var ordinal = reader.GetOrdinal(column);
+            return reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
+        }
+        catch { return null; }
+    }
+
+    private static double GetDoubleOrDefault(SqliteDataReader reader, string column)
+    {
+        try
+        {
+            var ordinal = reader.GetOrdinal(column);
+            return reader.IsDBNull(ordinal) ? 0 : reader.GetDouble(ordinal);
+        }
+        catch { return 0; }
+    }
+
+    private static int GetIntOrDefault(SqliteDataReader reader, string column)
+    {
+        try
+        {
+            var ordinal = reader.GetOrdinal(column);
+            return reader.IsDBNull(ordinal) ? 0 : reader.GetInt32(ordinal);
+        }
+        catch { return 0; }
+    }
 
     public void Dispose()
     {
