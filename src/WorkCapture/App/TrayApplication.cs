@@ -140,6 +140,7 @@ public class TrayApplication : IDisposable
         _contextMenu.Items.Add("Show Stats", null, OnShowStatsClick);
         _contextMenu.Items.Add("Screenshots", null, OnScreenshotsClick);
         _contextMenu.Items.Add(new ToolStripSeparator());
+        _contextMenu.Items.Add("Settings...", null, OnSettingsClick);
         _contextMenu.Items.Add("Update App", null, OnUpdateClick);
         var startupItem = new ToolStripMenuItem("Start with Windows", null, OnStartupToggleClick);
         startupItem.Checked = AppUpdater.IsRegisteredForStartup();
@@ -589,6 +590,12 @@ public class TrayApplication : IDisposable
             string.Join("\n", dbStats.TodayByClient.Select(kv => $"  {kv.Key}: {kv.Value}"));
 
         MessageBox.Show(message, "Work Capture Stats", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    private void OnSettingsClick(object? sender, EventArgs e)
+    {
+        using var form = new SettingsForm(_settings, _updater);
+        form.ShowDialog();
     }
 
     private async void OnUpdateClick(object? sender, EventArgs e)

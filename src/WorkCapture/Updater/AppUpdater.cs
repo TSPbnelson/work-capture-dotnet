@@ -226,6 +226,21 @@ public class AppUpdater : IDisposable
         }
     }
 
+    /// <summary>
+    /// Update the GitHub token on the existing client (avoids recreating the updater)
+    /// </summary>
+    public void UpdateToken(string newToken)
+    {
+        _client.DefaultRequestHeaders.Remove("Authorization");
+
+        if (!string.IsNullOrEmpty(newToken))
+        {
+            _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {newToken}");
+        }
+
+        Logger.Info("AppUpdater token updated");
+    }
+
     public void Dispose()
     {
         _client.Dispose();
