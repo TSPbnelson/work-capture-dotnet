@@ -12,4 +12,11 @@
 | #127 | 2:57 PM | 🔵 | Complete Work Capture System Pipeline - Screenshot to Invoice Flow | ~1089 |
 | #119 | 2:56 PM | 🔵 | WorkCapture API Sync Service with Offline Queue and Session Aggregation | ~616 |
 | #86 | 12:19 PM | 🔵 | WorkCapture Sync Service Targets /work-capture/sessions Endpoint | ~431 |
+
+### Feb 6, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #252 | 9:35 AM | 🟣 | Vision Analysis Results Aggregated by Highest Confidence in Work Sessions | ~431 |
+| #249 | 9:33 AM | 🔵 | Vision Analysis Fields in Sync Service Data Model | ~512 |
 </claude-mem-context>

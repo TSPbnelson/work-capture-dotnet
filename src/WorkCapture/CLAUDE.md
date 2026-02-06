@@ -7,9 +7,22 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #226 | 5:32 PM | ✅ | Version Bump to 1.4.1 for WorkCapture Release | ~278 |
 | #213 | 5:03 PM | 🟣 | Self-Updater and Automated Installation System for WorkCapture | ~585 |
 | #211 | " | ✅ | WorkCapture Version Promoted to 1.4.0 Minor Release | ~347 |
 | #206 | 4:56 PM | 🟣 | Idle Detection Added to WorkCapture for Capture Optimization | ~507 |
 | #205 | " | ✅ | WorkCapture Version Bumped to 1.3.1 | ~350 |
 | #164 | 3:24 PM | ✅ | WorkCapture Version Bumped to 1.3.0 | ~305 |
+
+### Feb 6, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #512 | 3:02 PM | ✅ | Version bumped to 1.4.5 for TimeSnapper capture logic release | ~262 |
+| #511 | " | 🔵 | WorkCapture.csproj targets .NET 8.0 Windows with self-contained single-file publishing | ~449 |
+| #485 | 2:50 PM | 🔵 | WorkCapture Program.cs implements single-instance enforcement and centralized logging | ~425 |
+| #265 | 9:51 AM | 🔴 | Improved Update Check Error Reporting in WorkCapture | ~345 |
+| #258 | 9:43 AM | 🟣 | WorkCapture v1.4.3 Released with Version Display in Tray Menu | ~361 |
+| #257 | " | ✅ | WorkCapture Version Incremented to 1.4.3 | ~230 |
+| #253 | 9:35 AM | ✅ | WorkCapture Version Bumped to 1.4.2 | ~304 |
 </claude-mem-context>

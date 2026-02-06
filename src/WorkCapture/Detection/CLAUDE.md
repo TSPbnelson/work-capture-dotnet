@@ -8,4 +8,10 @@
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
 | #125 | 2:57 PM | 🔵 | Client Detection with ITDocs API Lookup and Local Rules Fallback | ~605 |
+
+### Feb 6, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #489 | 2:54 PM | 🔵 | ActivityMonitor uses global hooks to track keyboard and mouse activity with idle detection | ~488 |
 </claude-mem-context>

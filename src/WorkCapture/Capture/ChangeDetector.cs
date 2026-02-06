@@ -25,15 +25,16 @@ public class ChangeDetector
     }
 
     /// <summary>
-    /// Determine if a capture should occur
+    /// Determine if a capture should occur.
+    /// Triggers: first capture, max interval, window change, content change (perceptual hash).
+    /// Keyboard/mouse activity is NOT a trigger - those are used only for idle detection
+    /// and adaptive rate adjustment.
     /// </summary>
     /// <returns>Tuple of (shouldCapture, reason)</returns>
     public (bool ShouldCapture, string Reason) ShouldCapture(
         string? currentTitle,
         string? currentProcess,
-        string? currentHash = null,
-        bool keyboardActive = false,
-        bool mouseActive = false)
+        string? currentHash = null)
     {
         var now = DateTime.Now;
 
@@ -56,11 +57,7 @@ public class ChangeDetector
         if (windowChanged)
             return (true, "window_changed");
 
-        // Check for keyboard activity
-        if (keyboardActive)
-            return (true, "keyboard_active");
-
-        // Check for significant image change
+        // Check for significant screen content change via perceptual hash
         if (!string.IsNullOrEmpty(currentHash) && !string.IsNullOrEmpty(_lastHash))
         {
             var diff = ScreenCapture.HashDifference(currentHash, _lastHash);

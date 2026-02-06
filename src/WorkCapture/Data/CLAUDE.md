@@ -8,4 +8,13 @@
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
 | #127 | 2:57 PM | 🔵 | Complete Work Capture System Pipeline - Screenshot to Invoice Flow | ~1089 |
+
+### Feb 6, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #510 | 2:58 PM | 🔴 | Implemented TimeSnapper-style capture logic removing keyboard activity as trigger | ~706 |
+| #506 | " | ✅ | Updated CaptureReason documentation to reflect new trigger types | ~291 |
+| #251 | 9:34 AM | 🔴 | Database Reader Fixed for Schema Evolution Compatibility | ~449 |
+| #250 | " | 🔵 | WorkCapture Data Models for Event Tracking and Session Aggregation | ~729 |
 </claude-mem-context>

@@ -8,4 +8,15 @@
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
 | #202 | 4:55 PM | 🔵 | Screenshot Capture with Perceptual Hashing and Intelligent Resizing | ~655 |
+
+### Feb 6, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #510 | 2:58 PM | 🔴 | Implemented TimeSnapper-style capture logic removing keyboard activity as trigger | ~706 |
+| #508 | " | 🟣 | ScreenCapture refactored with CaptureToMemory and SaveFromMemory methods for hash-before-save workflow | ~257 |
+| #502 | 2:57 PM | 🔄 | Split screenshot capture into two-phase process for hash-before-save optimization | ~416 |
+| #500 | 2:56 PM | 🔴 | Removed keyboard activity as screenshot capture trigger in ChangeDetector | ~418 |
+| #495 | " | 🔵 | ScreenCapture implements perceptual hashing using 8x8 grayscale downsampling | ~494 |
+| #490 | 2:54 PM | 🔵 | ChangeDetector implements intelligent capture logic with multiple triggers | ~517 |
 </claude-mem-context>

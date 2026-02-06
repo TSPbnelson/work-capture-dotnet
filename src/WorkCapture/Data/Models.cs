@@ -14,7 +14,7 @@ public class CaptureEvent
     public string? ClientCode { get; set; }
     public double ClientConfidence { get; set; }
     public string CaptureType { get; set; } = "full"; // full, metadata_only, skipped
-    public string CaptureReason { get; set; } = "timer"; // timer, window_change, keyboard_active
+    public string CaptureReason { get; set; } = "timer"; // first_capture, max_interval, window_changed, content_changed
     public string? ScreenshotPath { get; set; }
     public string? ImageHash { get; set; }
     public bool KeyboardActive { get; set; }

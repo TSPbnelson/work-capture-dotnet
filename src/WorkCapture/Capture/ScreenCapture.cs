@@ -29,10 +29,25 @@ public class ScreenCapture : IDisposable
     }
 
     /// <summary>
-    /// Capture the primary screen
+    /// Capture the primary screen (capture + save in one step)
     /// </summary>
     /// <returns>Tuple of (filepath, hash) or null if failed</returns>
     public (string Path, string Hash)? Capture()
+    {
+        var memCapture = CaptureToMemory();
+        if (memCapture == null)
+            return null;
+
+        return SaveFromMemory(memCapture);
+    }
+
+    /// <summary>
+    /// Capture screenshot to memory and compute perceptual hash WITHOUT saving to disk.
+    /// Use this to get the hash for change detection before deciding whether to save.
+    /// Call SaveFromMemory() to persist if the capture should be kept.
+    /// </summary>
+    /// <returns>In-memory capture with hash, or null if failed</returns>
+    public MemoryCapture? CaptureToMemory()
     {
         try
         {
@@ -52,7 +67,7 @@ public class ScreenCapture : IDisposable
             bitmap.Save(ms, ImageFormat.Png);
             ms.Position = 0;
 
-            using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(ms);
+            var image = SixLabors.ImageSharp.Image.Load<Rgba32>(ms);
 
             // Resize if needed
             if (image.Width > _maxWidth)
@@ -65,6 +80,23 @@ public class ScreenCapture : IDisposable
             // Calculate perceptual hash
             var hash = CalculatePerceptualHash(image);
 
+            return new MemoryCapture(image, hash);
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"Screenshot capture to memory failed: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Save a previously captured in-memory screenshot to disk.
+    /// Disposes the MemoryCapture after saving.
+    /// </summary>
+    public (string Path, string Hash)? SaveFromMemory(MemoryCapture memCapture)
+    {
+        try
+        {
             // Generate filename
             var now = DateTime.Now;
             var dateDir = Path.Combine(_outputDir, now.ToString("yyyy-MM-dd"));
@@ -74,14 +106,19 @@ public class ScreenCapture : IDisposable
             var filepath = Path.Combine(dateDir, filename);
 
             // Save image
-            SaveImage(image, filepath);
+            SaveImage(memCapture.Image, filepath);
+            var hash = memCapture.Hash;
+
+            // Dispose the in-memory image
+            memCapture.Dispose();
 
             Logger.Debug($"Captured screenshot: {filepath}");
             return (filepath, hash);
         }
         catch (Exception ex)
         {
-            Logger.Error($"Screenshot capture failed: {ex.Message}");
+            Logger.Error($"Screenshot save failed: {ex.Message}");
+            memCapture.Dispose();
             return null;
         }
     }
@@ -182,6 +219,27 @@ public class ScreenCapture : IDisposable
     public void Dispose()
     {
         // Nothing to dispose
+    }
+}
+
+/// <summary>
+/// Holds a screenshot in memory with its perceptual hash.
+/// Must be disposed after use (whether saved or discarded).
+/// </summary>
+public class MemoryCapture : IDisposable
+{
+    public Image<Rgba32> Image { get; }
+    public string Hash { get; }
+
+    public MemoryCapture(Image<Rgba32> image, string hash)
+    {
+        Image = image;
+        Hash = hash;
+    }
+
+    public void Dispose()
+    {
+        Image.Dispose();
     }
 }
 

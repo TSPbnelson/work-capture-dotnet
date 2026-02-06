@@ -15,4 +15,11 @@
 | #127 | 2:57 PM | 🔵 | Complete Work Capture System Pipeline - Screenshot to Invoice Flow | ~1089 |
 | #117 | 2:56 PM | 🔵 | WorkCapture .NET Client Configuration Architecture | ~608 |
 | #73 | 11:27 AM | 🔵 | WorkCapture .NET Configuration Structure | ~652 |
+
+### Feb 6, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #510 | 2:58 PM | 🔴 | Implemented TimeSnapper-style capture logic removing keyboard activity as trigger | ~706 |
+| #496 | 2:56 PM | 🔵 | Settings configuration includes CaptureOnKeyboardActivity toggle controlling activity-based capture triggers | ~513 |
 </claude-mem-context>

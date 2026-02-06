@@ -284,25 +284,96 @@ public class TrayApplication : IDisposable
             return;
         }
 
-        // Get activity state
+        // Get activity state for adaptive rate (NOT used as capture trigger)
         var keyboardActive = _activityMonitor.IsKeyboardActive;
         var mouseActive = _activityMonitor.IsMouseActive;
 
-        // Update adaptive rate
+        // Update adaptive rate based on activity level
         _adaptiveRate.UpdateActivity(keyboardActive, mouseActive);
 
-        // Check if we should capture
+        // Handle sensitive content - metadata only, no screenshot needed
+        if (_privacyFilter.IsSensitiveContent(windowInfo.Title, windowInfo.Url))
+        {
+            // For metadata-only captures, check window change or max interval
+            var (shouldCaptureMeta, metaReason) = _changeDetector.ShouldCapture(
+                windowInfo.Title,
+                windowInfo.ProcessName);
+
+            if (!shouldCaptureMeta)
+            {
+                Logger.Debug($"Skipping metadata: {metaReason}");
+                _skipCount++;
+                return;
+            }
+
+            var clientMatchMeta = _clientDetector.Detect(
+                windowTitle: windowInfo.Title,
+                hostname: windowInfo.Hostname,
+                url: windowInfo.Url);
+
+            var metaEvt = new CaptureEvent
+            {
+                Timestamp = DateTime.Now,
+                WindowTitle = windowInfo.Title,
+                ProcessName = windowInfo.ProcessName,
+                Url = windowInfo.Url,
+                Hostname = windowInfo.Hostname,
+                ClientCode = clientMatchMeta?.ClientCode,
+                ClientConfidence = clientMatchMeta?.Confidence ?? 0,
+                CaptureType = "metadata_only",
+                CaptureReason = metaReason,
+                KeyboardActive = keyboardActive,
+                MouseActive = mouseActive
+            };
+
+            _db.InsertCaptureEvent(metaEvt);
+            _changeDetector.RecordCapture(windowInfo.Title, windowInfo.ProcessName, null);
+            _captureCount++;
+
+            Logger.Debug($"Captured: metadata_only | {windowInfo.ProcessName} | " +
+                         $"Client: {clientMatchMeta?.ClientCode ?? "Unknown"} | Reason: {metaReason}");
+            return;
+        }
+
+        // Capture screenshot to memory to get perceptual hash for change detection
+        var memCapture = _screenCapture.CaptureToMemory();
+        if (memCapture == null)
+        {
+            Logger.Debug("Screenshot capture to memory failed, skipping");
+            _skipCount++;
+            return;
+        }
+
+        // Check if we should save this capture (using hash for content change detection)
         var (shouldCapture, captureReason) = _changeDetector.ShouldCapture(
             windowInfo.Title,
             windowInfo.ProcessName,
-            keyboardActive: keyboardActive && _settings.Capture.CaptureOnKeyboardActivity,
-            mouseActive: mouseActive);
+            currentHash: memCapture.Hash);
 
         if (!shouldCapture)
         {
+            // Discard the in-memory screenshot
+            memCapture.Dispose();
             Logger.Debug($"Skipping: {captureReason}");
             _skipCount++;
             return;
+        }
+
+        // Save the screenshot to disk
+        string? screenshotPath = null;
+        string? imageHash = null;
+        string captureType;
+
+        var saveResult = _screenCapture.SaveFromMemory(memCapture);
+        if (saveResult != null)
+        {
+            screenshotPath = saveResult.Value.Path;
+            imageHash = saveResult.Value.Hash;
+            captureType = "full";
+        }
+        else
+        {
+            captureType = "failed";
         }
 
         // Detect client
@@ -310,30 +381,6 @@ public class TrayApplication : IDisposable
             windowTitle: windowInfo.Title,
             hostname: windowInfo.Hostname,
             url: windowInfo.Url);
-
-        // Determine capture type
-        string captureType;
-        string? screenshotPath = null;
-        string? imageHash = null;
-
-        if (_privacyFilter.IsSensitiveContent(windowInfo.Title, windowInfo.Url))
-        {
-            captureType = "metadata_only";
-        }
-        else
-        {
-            var result = _screenCapture.Capture();
-            if (result != null)
-            {
-                screenshotPath = result.Value.Path;
-                imageHash = result.Value.Hash;
-                captureType = "full";
-            }
-            else
-            {
-                captureType = "failed";
-            }
-        }
 
         // Record in database
         var evt = new CaptureEvent
@@ -355,7 +402,7 @@ public class TrayApplication : IDisposable
 
         _db.InsertCaptureEvent(evt);
 
-        // Update change detector
+        // Update change detector with actual saved hash
         _changeDetector.RecordCapture(windowInfo.Title, windowInfo.ProcessName, imageHash);
 
         _captureCount++;
