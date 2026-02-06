@@ -550,12 +550,12 @@ public class TrayApplication : IDisposable
         _trayIcon.BalloonTipText = "Checking for updates...";
         _trayIcon.ShowBalloonTip(2000);
 
-        var release = await _updater.CheckForUpdate();
+        var (release, error) = await _updater.CheckForUpdate();
 
         if (release == null)
         {
-            MessageBox.Show("Could not check for updates. Check your internet connection.",
-                "Update", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show($"Update check failed:\n\n{error ?? "Unknown error"}",
+                "Update Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 

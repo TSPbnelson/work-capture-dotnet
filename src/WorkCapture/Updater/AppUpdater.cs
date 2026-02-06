@@ -34,14 +34,24 @@ public class AppUpdater : IDisposable
     /// <summary>
     /// Check GitHub for latest release version
     /// </summary>
-    public async Task<ReleaseInfo?> CheckForUpdate()
+    public async Task<(ReleaseInfo? Release, string? Error)> CheckForUpdate()
     {
         try
         {
             var url = $"https://api.github.com/repos/{RepoOwner}/{RepoName}/releases/latest";
-            var release = await _client.GetFromJsonAsync<GitHubRelease>(url);
+            var response = await _client.GetAsync(url);
 
-            if (release == null) return null;
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                var error = $"GitHub API returned {(int)response.StatusCode}: {body}";
+                Logger.Error(error);
+                return (null, error);
+            }
+
+            var release = await response.Content.ReadFromJsonAsync<GitHubRelease>();
+
+            if (release == null) return (null, "Empty response from GitHub");
 
             var latestVersion = release.TagName.TrimStart('v');
 
@@ -54,7 +64,7 @@ public class AppUpdater : IDisposable
                 a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
 
             // Use API URL for private repos (requires Accept: application/octet-stream)
-            return new ReleaseInfo
+            return (new ReleaseInfo
             {
                 CurrentVersion = _currentVersion,
                 LatestVersion = latestVersion,
@@ -62,12 +72,12 @@ public class AppUpdater : IDisposable
                 DownloadUrl = asset?.Url ?? "",
                 ReleaseNotes = release.Body ?? "",
                 AssetName = asset?.Name ?? ""
-            };
+            }, null);
         }
         catch (Exception ex)
         {
             Logger.Error($"Update check failed: {ex.Message}");
-            return null;
+            return (null, ex.Message);
         }
     }
 
