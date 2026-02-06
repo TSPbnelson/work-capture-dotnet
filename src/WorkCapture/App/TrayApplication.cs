@@ -126,7 +126,9 @@ public class TrayApplication : IDisposable
     private void CreateTrayIcon()
     {
         // Create context menu
+        var version = typeof(TrayApplication).Assembly.GetName().Version?.ToString(3) ?? "?";
         _contextMenu = new ContextMenuStrip();
+        _contextMenu.Items.Add($"WorkCapture v{version}").Enabled = false;
         _contextMenu.Items.Add("Status: Running").Enabled = false;
         _contextMenu.Items.Add(new ToolStripSeparator());
         _contextMenu.Items.Add("Pause", null, OnPauseClick);
@@ -175,9 +177,9 @@ public class TrayApplication : IDisposable
             _trayIcon.Text = $"Work Capture - {status}";
         }
 
-        if (_contextMenu?.Items.Count > 0)
+        if (_contextMenu?.Items.Count > 1)
         {
-            _contextMenu.Items[0].Text = $"Status: {status}";
+            _contextMenu.Items[1].Text = $"Status: {status}";
         }
     }
 
