@@ -74,7 +74,7 @@ public class TrayApplication : IDisposable
         _changeDetector = new ChangeDetector(
             settings.Capture.ChangeDetectionThreshold,
             minIntervalSeconds: 2,
-            maxIntervalSeconds: settings.Capture.CaptureIntervalSeconds * 6);
+            maxIntervalSeconds: settings.Capture.CaptureIntervalSeconds);
 
         _adaptiveRate = new AdaptiveCaptureRate(
             settings.Capture.CaptureIntervalSeconds,

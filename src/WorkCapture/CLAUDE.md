@@ -18,6 +18,8 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #539 | 3:38 PM | 🟣 | Added Settings dialog for GitHub token configuration to fix updater 404 errors | ~556 |
+| #537 | " | 🟣 | Implemented Settings dialog with GitHub token configuration and validation | ~570 |
 | #512 | 3:02 PM | ✅ | Version bumped to 1.4.5 for TimeSnapper capture logic release | ~262 |
 | #511 | " | 🔵 | WorkCapture.csproj targets .NET 8.0 Windows with self-contained single-file publishing | ~449 |
 | #485 | 2:50 PM | 🔵 | WorkCapture Program.cs implements single-instance enforcement and centralized logging | ~425 |
