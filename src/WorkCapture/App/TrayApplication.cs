@@ -226,14 +226,27 @@ public class TrayApplication : IDisposable
         {
             try
             {
+                var loopStart = DateTime.UtcNow;
+
                 if (!_paused)
                 {
                     DoCaptureCheck();
                 }
 
-                // Fixed interval from settings (pure change detection, no adaptive rate)
-                var interval = TimeSpan.FromSeconds(_settings.Capture.CaptureIntervalSeconds);
-                await Task.Delay(interval, token);
+                // Calculate remaining time to maintain precise interval
+                var intervalSeconds = _settings.Capture.CaptureIntervalSeconds;
+                var elapsed = (DateTime.UtcNow - loopStart).TotalSeconds;
+                var remaining = intervalSeconds - elapsed;
+
+                // Only delay if we have time remaining, otherwise continue immediately
+                if (remaining > 0)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(remaining), token);
+                }
+                else
+                {
+                    Logger.Debug($"Capture took {elapsed:F1}s (longer than {intervalSeconds}s interval), continuing immediately");
+                }
             }
             catch (TaskCanceledException)
             {

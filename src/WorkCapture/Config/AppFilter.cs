@@ -105,6 +105,7 @@ public class AppFilterConfig
                 "firefox",
                 "mstsc",
                 "strwinclt",
+                "isllight",
                 "putty",
                 "winscp",
                 "code",

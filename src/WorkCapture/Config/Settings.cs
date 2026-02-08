@@ -94,7 +94,7 @@ public class Settings
 public class CaptureSettings
 {
     /// <summary>Seconds between capture checks</summary>
-    public int CaptureIntervalSeconds { get; set; } = 5;
+    public int CaptureIntervalSeconds { get; set; } = 3;
 
     /// <summary>Capture when window title changes</summary>
     public bool CaptureOnWindowChange { get; set; } = true;
