@@ -27,4 +27,13 @@
 | #258 | 9:43 AM | 🟣 | WorkCapture v1.4.3 Released with Version Display in Tray Menu | ~361 |
 | #257 | " | ✅ | WorkCapture Version Incremented to 1.4.3 | ~230 |
 | #253 | 9:35 AM | ✅ | WorkCapture Version Bumped to 1.4.2 | ~304 |
+
+### Feb 7, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #620 | 7:54 PM | ✅ | WorkCapture version bumped to 1.4.8 | ~248 |
+| #612 | 7:53 PM | ✅ | Version bumped to 1.4.8 for adaptive rate removal fix | ~253 |
+| #595 | 2:35 PM | 🔴 | Fixed max capture interval to match timer interval for proper TimeSnapper behavior | ~463 |
+| #594 | " | ✅ | Version bumped to 1.4.7 for AppUpdater token management feature | ~234 |
 </claude-mem-context>

@@ -1,7 +1,10 @@
 namespace WorkCapture.Capture;
 
 /// <summary>
-/// Determines when to capture based on changes
+/// Pure change detection: only saves when screen content actually changes.
+/// Used with a fixed-interval timer (from settings). The timer wakes every N seconds,
+/// captures to memory, compares perceptual hash, and only saves if changed.
+/// Max interval (1 hour) provides a safety backup capture on completely static screens.
 /// </summary>
 public class ChangeDetector
 {
@@ -25,10 +28,9 @@ public class ChangeDetector
     }
 
     /// <summary>
-    /// Determine if a capture should occur.
-    /// Triggers: first capture, max interval, window change, content change (perceptual hash).
-    /// Keyboard/mouse activity is NOT a trigger - those are used only for idle detection
-    /// and adaptive rate adjustment.
+    /// Determine if a capture should be saved.
+    /// Triggers: first capture, max interval (1hr safety), window change, content change (perceptual hash).
+    /// Keyboard/mouse activity is NOT a trigger - used only for idle detection and metadata.
     /// </summary>
     /// <returns>Tuple of (shouldCapture, reason)</returns>
     public (bool ShouldCapture, string Reason) ShouldCapture(
@@ -103,61 +105,4 @@ public class ChangeDetector
         _lastProcess = null;
         _lastHash = null;
     }
-}
-
-/// <summary>
-/// Adjusts capture rate based on activity level
-/// </summary>
-public class AdaptiveCaptureRate
-{
-    private readonly double _baseInterval;
-    private readonly double _minInterval;
-    private readonly double _maxInterval;
-
-    private double _currentInterval;
-    private double _activityLevel = 0.5;
-
-    public AdaptiveCaptureRate(
-        double baseInterval = 5.0,
-        double minInterval = 2.0,
-        double maxInterval = 30.0)
-    {
-        _baseInterval = baseInterval;
-        _minInterval = minInterval;
-        _maxInterval = maxInterval;
-        _currentInterval = baseInterval;
-    }
-
-    /// <summary>
-    /// Update activity level based on recent activity
-    /// </summary>
-    public void UpdateActivity(bool keyboardActive, bool mouseActive)
-    {
-        double increment = 0.0;
-
-        if (keyboardActive)
-            increment += 0.3;
-        if (mouseActive)
-            increment += 0.1;
-
-        // Decay toward baseline
-        _activityLevel = _activityLevel * 0.9 + increment;
-
-        // Clamp to [0, 1]
-        _activityLevel = Math.Clamp(_activityLevel, 0.0, 1.0);
-
-        // Calculate interval: high activity = short interval
-        var range = _maxInterval - _minInterval;
-        _currentInterval = _maxInterval - (_activityLevel * range);
-    }
-
-    /// <summary>
-    /// Get current recommended capture interval in seconds
-    /// </summary>
-    public double CurrentInterval => _currentInterval;
-
-    /// <summary>
-    /// Get current activity level (0-1)
-    /// </summary>
-    public double ActivityLevel => _activityLevel;
 }

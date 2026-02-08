@@ -24,7 +24,6 @@ public class TrayApplication : IDisposable
     private readonly ClientDetector _clientDetector;
     private readonly PrivacyFilter _privacyFilter;
     private readonly ChangeDetector _changeDetector;
-    private readonly AdaptiveCaptureRate _adaptiveRate;
     private readonly ApiSyncService _syncService;
     private readonly AppFilterConfig _appFilter;
 
@@ -74,12 +73,7 @@ public class TrayApplication : IDisposable
         _changeDetector = new ChangeDetector(
             settings.Capture.ChangeDetectionThreshold,
             minIntervalSeconds: 2,
-            maxIntervalSeconds: settings.Capture.CaptureIntervalSeconds);
-
-        _adaptiveRate = new AdaptiveCaptureRate(
-            settings.Capture.CaptureIntervalSeconds,
-            minInterval: 2.0,
-            maxInterval: 30.0);
+            maxIntervalSeconds: 3600);  // 1-hour safety backup capture on static screens
 
         _syncService = new ApiSyncService(_db, settings.Sync);
 
@@ -237,7 +231,8 @@ public class TrayApplication : IDisposable
                     DoCaptureCheck();
                 }
 
-                var interval = TimeSpan.FromSeconds(_adaptiveRate.CurrentInterval);
+                // Fixed interval from settings (pure change detection, no adaptive rate)
+                var interval = TimeSpan.FromSeconds(_settings.Capture.CaptureIntervalSeconds);
                 await Task.Delay(interval, token);
             }
             catch (TaskCanceledException)
@@ -285,12 +280,9 @@ public class TrayApplication : IDisposable
             return;
         }
 
-        // Get activity state for adaptive rate (NOT used as capture trigger)
+        // Get activity state for metadata (NOT used as capture trigger)
         var keyboardActive = _activityMonitor.IsKeyboardActive;
         var mouseActive = _activityMonitor.IsMouseActive;
-
-        // Update adaptive rate based on activity level
-        _adaptiveRate.UpdateActivity(keyboardActive, mouseActive);
 
         // Handle sensitive content - metadata only, no screenshot needed
         if (_privacyFilter.IsSensitiveContent(windowInfo.Title, windowInfo.Url))
@@ -574,7 +566,7 @@ public class TrayApplication : IDisposable
             $"Today's events: {dbStats.TodayEvents}\n" +
             $"Unsynced: {dbStats.UnsyncedEvents}\n" +
             $"Sync pending: {syncStatus.PendingQueue}\n" +
-            $"Activity level: {_adaptiveRate.ActivityLevel:P0}\n";
+            $"Interval: {_settings.Capture.CaptureIntervalSeconds}s (fixed)\n";
 
         // Add vision stats if available
         if (_visionClient != null)

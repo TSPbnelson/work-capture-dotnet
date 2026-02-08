@@ -19,4 +19,12 @@
 | #500 | 2:56 PM | 🔴 | Removed keyboard activity as screenshot capture trigger in ChangeDetector | ~418 |
 | #495 | " | 🔵 | ScreenCapture implements perceptual hashing using 8x8 grayscale downsampling | ~494 |
 | #490 | 2:54 PM | 🔵 | ChangeDetector implements intelligent capture logic with multiple triggers | ~517 |
+
+### Feb 7, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #616 | 7:53 PM | ✅ | Updated ChangeDetector documentation to clarify save decision and max interval purpose | ~326 |
+| #615 | " | ✅ | Updated ChangeDetector documentation to clarify fixed-interval timer usage | ~358 |
+| #611 | " | 🔄 | Removed AdaptiveCaptureRate class from ChangeDetector.cs | ~407 |
 </claude-mem-context>

@@ -99,7 +99,7 @@ public class CaptureSettings
     /// <summary>Capture when window title changes</summary>
     public bool CaptureOnWindowChange { get; set; } = true;
 
-    /// <summary>Milliseconds to consider keyboard "active" (used for idle detection and adaptive rate)</summary>
+    /// <summary>Milliseconds to consider keyboard "active" (used for idle detection only)</summary>
     public int KeyboardActivityWindowMs { get; set; } = 500;
 
     /// <summary>Image format: webp, png, jpg</summary>
