@@ -112,6 +112,12 @@ public class ApiSyncService : IDisposable
             await SyncSession(session);
         }
 
+        // Upload screenshots if enabled
+        if (_settings.SyncScreenshots)
+        {
+            await UploadTodaysScreenshots();
+        }
+
         _lastSync = DateTime.Now;
     }
 
@@ -267,6 +273,109 @@ public class ApiSyncService : IDisposable
         }
 
         return sessions;
+    }
+
+    /// <summary>
+    /// Upload today's unuploaded screenshots
+    /// </summary>
+    private async Task UploadTodaysScreenshots()
+    {
+        var today = DateTime.Today;
+        var unuploadedPaths = _db.GetUnuploadedScreenshots(today);
+
+        if (!unuploadedPaths.Any())
+        {
+            Logger.Debug("No screenshots to upload for today");
+            return;
+        }
+
+        Logger.Info($"Uploading {unuploadedPaths.Count} screenshots for {today:yyyy-MM-dd}");
+
+        int uploaded = 0;
+        int failed = 0;
+
+        foreach (var path in unuploadedPaths)
+        {
+            try
+            {
+                if (!File.Exists(path))
+                {
+                    Logger.Warning($"Screenshot not found: {path}");
+                    continue;
+                }
+
+                await UploadScreenshot(path);
+                uploaded++;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Failed to upload {Path.GetFileName(path)}: {ex.Message}");
+                failed++;
+            }
+        }
+
+        if (uploaded > 0)
+        {
+            Logger.Info($"Screenshot upload complete: {uploaded} uploaded, {failed} failed");
+        }
+    }
+
+    /// <summary>
+    /// Upload a single screenshot to the server
+    /// </summary>
+    private async Task UploadScreenshot(string screenshotPath)
+    {
+        // Check if already uploaded
+        if (_db.IsScreenshotUploaded(screenshotPath))
+        {
+            Logger.Debug($"Screenshot already uploaded: {Path.GetFileName(screenshotPath)}");
+            return;
+        }
+
+        var fileInfo = new FileInfo(screenshotPath);
+        if (!fileInfo.Exists)
+        {
+            Logger.Warning($"Screenshot file not found: {screenshotPath}");
+            return;
+        }
+
+        // Extract date and client from file path or database
+        var timestamp = File.GetCreationTime(screenshotPath);
+        string? clientCode = ExtractClientCodeFromPath(screenshotPath);
+
+        using var content = new MultipartFormDataContent();
+        using var fileStream = File.OpenRead(screenshotPath);
+        using var streamContent = new StreamContent(fileStream);
+
+        streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/webp");
+
+        content.Add(streamContent, "file", Path.GetFileName(screenshotPath));
+        content.Add(new StringContent(clientCode ?? "GENERAL"), "client_code");
+        content.Add(new StringContent(timestamp.ToString("O")), "timestamp");
+
+        var response = await _client.PostAsync("/work-capture/screenshots/upload", content);
+
+        if (response.IsSuccessStatusCode)
+        {
+            _db.MarkScreenshotUploaded(screenshotPath, fileInfo.Length, clientCode);
+            Logger.Debug($"Uploaded: {Path.GetFileName(screenshotPath)}");
+        }
+        else
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            throw new Exception($"Upload failed: {response.StatusCode} - {error}");
+        }
+    }
+
+    /// <summary>
+    /// Extract client code from screenshot filename or database
+    /// </summary>
+    private string? ExtractClientCodeFromPath(string screenshotPath)
+    {
+        // Check database first
+        var events = _db.GetEventsForDate(DateTime.Today);
+        var evt = events.FirstOrDefault(e => e.ScreenshotPath == screenshotPath);
+        return evt?.ClientCode ?? evt?.VisionClientCode;
     }
 
     /// <summary>

@@ -4,7 +4,7 @@
     "screenshotFormat": "webp",
     "screenshotQuality": 85,
     "maxScreenshotWidth": 2000,
-    "changeDetectionThreshold": 10,
+    "changeDetectionThreshold": 3,
     "keyboardActivityWindowMs": 500,
     "captureOnKeyboardActivity": true,
     "retentionDays": 30

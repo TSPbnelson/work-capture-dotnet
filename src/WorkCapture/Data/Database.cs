@@ -66,12 +66,22 @@ public class Database : IDisposable
                 retry_count INTEGER DEFAULT 0
             );
 
+            CREATE TABLE IF NOT EXISTS screenshot_uploads (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                screenshot_path TEXT UNIQUE NOT NULL,
+                uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                file_size_bytes INTEGER,
+                client_code TEXT,
+                upload_status TEXT DEFAULT 'success'
+            );
+
             CREATE INDEX IF NOT EXISTS idx_events_timestamp ON capture_events(timestamp);
             CREATE INDEX IF NOT EXISTS idx_events_client ON capture_events(client_code);
             CREATE INDEX IF NOT EXISTS idx_events_synced ON capture_events(synced);
             CREATE INDEX IF NOT EXISTS idx_sessions_date ON work_sessions(date);
             CREATE INDEX IF NOT EXISTS idx_sessions_synced ON work_sessions(synced);
             CREATE INDEX IF NOT EXISTS idx_sync_status ON sync_queue(status);
+            CREATE INDEX IF NOT EXISTS idx_screenshot_uploads_path ON screenshot_uploads(screenshot_path);
         ";
         cmd.ExecuteNonQuery();
 
@@ -469,6 +479,75 @@ public class Database : IDisposable
             return reader.IsDBNull(ordinal) ? 0 : reader.GetInt32(ordinal);
         }
         catch { return 0; }
+    }
+
+    /// <summary>
+    /// Check if a screenshot has been uploaded
+    /// </summary>
+    public bool IsScreenshotUploaded(string screenshotPath)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT COUNT(*) FROM screenshot_uploads
+            WHERE screenshot_path = @path AND upload_status = 'success'
+        ";
+        cmd.Parameters.AddWithValue("@path", screenshotPath);
+
+        return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
+    }
+
+    /// <summary>
+    /// Mark a screenshot as uploaded
+    /// </summary>
+    public void MarkScreenshotUploaded(string screenshotPath, long fileSizeBytes, string? clientCode)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            INSERT OR REPLACE INTO screenshot_uploads (screenshot_path, file_size_bytes, client_code, uploaded_at)
+            VALUES (@path, @size, @client, @now)
+        ";
+        cmd.Parameters.AddWithValue("@path", screenshotPath);
+        cmd.Parameters.AddWithValue("@size", fileSizeBytes);
+        cmd.Parameters.AddWithValue("@client", clientCode ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@now", DateTime.Now.ToString("O"));
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Get unuploaded screenshots for a specific date
+    /// </summary>
+    public List<string> GetUnuploadedScreenshots(DateTime date)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT screenshot_path FROM capture_events
+            WHERE date(timestamp) = @date
+              AND screenshot_path IS NOT NULL
+              AND screenshot_path NOT IN (
+                  SELECT screenshot_path FROM screenshot_uploads WHERE upload_status = 'success'
+              )
+            ORDER BY timestamp ASC
+        ";
+        cmd.Parameters.AddWithValue("@date", date.ToString("yyyy-MM-dd"));
+
+        var paths = new List<string>();
+        using var reader = cmd.ExecuteReader();
+
+        while (reader.Read())
+        {
+            paths.Add(reader.GetString(0));
+        }
+
+        return paths;
     }
 
     public void Dispose()
