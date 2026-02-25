@@ -4,8 +4,6 @@
     "KeePass",
     "Bitwarden",
     "LastPass",
-    "mstsc",
-    "vmconnect",
     "CredentialUIBroker"
   ],
   "excluded_window_titles": [
