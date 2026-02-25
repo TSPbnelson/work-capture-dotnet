@@ -46,6 +46,7 @@ public class TrayApplication : IDisposable
     private Task? _captureTask;
     private int _captureCount;
     private int _skipCount;
+    private DateTime _lastStatsLog = DateTime.MinValue;
 
     public TrayApplication(Settings settings)
     {
@@ -262,6 +263,13 @@ public class TrayApplication : IDisposable
 
     private void DoCaptureCheck()
     {
+        // Periodic diagnostic log (every 60s) - helps diagnose idle/skip issues
+        if ((DateTime.Now - _lastStatsLog).TotalSeconds >= 60)
+        {
+            Logger.Info($"[Status] idle={_activityMonitor.IdleSeconds:F0}s idleLimit={_settings.Capture.IdleTimeoutSeconds}s captures={_captureCount} skips={_skipCount}");
+            _lastStatsLog = DateTime.Now;
+        }
+
         // Skip capture if user is idle
         var idleTimeout = _settings.Capture.IdleTimeoutSeconds;
         if (idleTimeout > 0 && _activityMonitor.IdleSeconds > idleTimeout)
@@ -276,7 +284,7 @@ public class TrayApplication : IDisposable
         // Check app filter - only capture allowed apps
         if (!_appFilter.IsAllowed(windowInfo.ProcessName))
         {
-            Logger.Debug($"App filtered: {windowInfo.ProcessName}");
+            Logger.Info($"Skip: app_filtered | proc={windowInfo.ProcessName}");
             return; // Don't count as skip, just ignore
         }
 
@@ -288,7 +296,7 @@ public class TrayApplication : IDisposable
 
         if (excluded)
         {
-            Logger.Debug($"Excluded: {reason}");
+            Logger.Info($"Skip: privacy [{reason}] | proc={windowInfo.ProcessName} | title={windowInfo.Title}");
             _skipCount++;
             return;
         }
@@ -307,7 +315,7 @@ public class TrayApplication : IDisposable
 
             if (!shouldCaptureMeta)
             {
-                Logger.Debug($"Skipping metadata: {metaReason}");
+                Logger.Info($"Skip: metadata [{metaReason}] | proc={windowInfo.ProcessName}");
                 _skipCount++;
                 return;
             }
@@ -345,7 +353,7 @@ public class TrayApplication : IDisposable
         var memCapture = _screenCapture.CaptureToMemory();
         if (memCapture == null)
         {
-            Logger.Debug("Screenshot capture to memory failed, skipping");
+            Logger.Info("Skip: CaptureToMemory returned null");
             _skipCount++;
             return;
         }
@@ -359,8 +367,9 @@ public class TrayApplication : IDisposable
         if (!shouldCapture)
         {
             // Discard the in-memory screenshot
+            var hashForLog = memCapture.Hash;
             memCapture.Dispose();
-            Logger.Debug($"Skipping: {captureReason}");
+            Logger.Info($"Skip: [{captureReason}] | proc={windowInfo.ProcessName} | hash={hashForLog}");
             _skipCount++;
             return;
         }
@@ -436,8 +445,8 @@ public class TrayApplication : IDisposable
             }
         }
 
-        Logger.Debug($"Captured: {captureType} | {windowInfo.ProcessName} | " +
-                     $"Client: {clientMatch?.ClientCode ?? "Unknown"} | Reason: {captureReason}");
+        Logger.Info($"Captured: {captureType} | {windowInfo.ProcessName} | " +
+                    $"Client: {clientMatch?.ClientCode ?? "Unknown"} | Reason: {captureReason}");
     }
 
     /// <summary>
