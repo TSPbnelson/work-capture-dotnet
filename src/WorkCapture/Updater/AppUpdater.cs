@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net.Http.Json;
+using System.Reflection;
 using System.Text.Json.Serialization;
 
 namespace WorkCapture.Updater;
@@ -26,9 +27,12 @@ public class AppUpdater : IDisposable
             _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {githubToken}");
         }
 
-        // Get current version from assembly
-        var asm = typeof(AppUpdater).Assembly.GetName();
-        _currentVersion = asm.Version?.ToString(3) ?? "0.0.0";
+        // Get current version from InformationalVersion attribute (set by <Version> in csproj).
+        // Assembly.GetName().Version reads <AssemblyVersion> which defaults to 1.0.0 if not set,
+        // causing the updater to always think it needs to update.
+        var versionAttr = typeof(AppUpdater).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+        _currentVersion = versionAttr?.InformationalVersion?.Split('+')[0] ?? "0.0.0";
     }
 
     /// <summary>

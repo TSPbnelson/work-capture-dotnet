@@ -9,7 +9,8 @@
     <!-- <ApplicationIcon>Resources\icon.ico</ApplicationIcon> -->
     <AssemblyName>WorkCapture</AssemblyName>
     <RootNamespace>WorkCapture</RootNamespace>
-    <Version>1.4.11</Version>
+    <Version>1.4.12</Version>
+    <AssemblyVersion>1.4.12</AssemblyVersion>
     <Company>Tech Server Pro</Company>
     <Product>Work Capture</Product>
     <Description>Real-time work tracking and screenshot capture for MSP billing</Description>
