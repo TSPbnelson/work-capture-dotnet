@@ -124,65 +124,75 @@ public class ScreenCapture : IDisposable
     }
 
     /// <summary>
-    /// Calculate a simple perceptual hash for change detection
+    /// Calculate a perceptual hash for change detection using 16x16 grid (256 bits).
+    /// 16x16 provides 4x finer spatial resolution than 8x8, enabling detection of
+    /// within-app navigation changes (e.g. Server Manager section changes).
     /// </summary>
     private static string CalculatePerceptualHash(Image<Rgba32> image)
     {
-        // Resize to 8x8 for hashing
-        using var small = image.Clone(x => x.Resize(8, 8).Grayscale());
+        const int hashSize = 16; // 16x16 = 256 bits (was 8x8 = 64 bits)
+        using var small = image.Clone(x => x.Resize(hashSize, hashSize).Grayscale());
 
-        // Calculate average
+        int totalPixels = hashSize * hashSize; // 256
         double total = 0;
-        var pixels = new double[64];
+        var pixels = new double[totalPixels];
         int i = 0;
 
-        for (int y = 0; y < 8; y++)
+        for (int y = 0; y < hashSize; y++)
         {
-            for (int x = 0; x < 8; x++)
+            for (int x = 0; x < hashSize; x++)
             {
                 var pixel = small[x, y];
-                var gray = pixel.R; // Already grayscale
-                pixels[i] = gray;
-                total += gray;
+                pixels[i] = pixel.R; // Already grayscale
+                total += pixel.R;
                 i++;
             }
         }
 
-        var average = total / 64;
+        var average = total / totalPixels;
 
-        // Build hash - 1 if pixel > average, 0 otherwise
-        ulong hash = 0;
-        for (int j = 0; j < 64; j++)
+        // Build hash as byte array (256 bits = 32 bytes → 64-char hex string)
+        var hashBytes = new byte[totalPixels / 8]; // 32 bytes
+        for (int j = 0; j < totalPixels; j++)
         {
             if (pixels[j] > average)
             {
-                hash |= (1UL << j);
+                hashBytes[j / 8] |= (byte)(1 << (j % 8));
             }
         }
 
-        return hash.ToString("X16");
+        return Convert.ToHexString(hashBytes); // 64-char uppercase hex
     }
 
     /// <summary>
-    /// Calculate Hamming distance between two hashes
+    /// Calculate Hamming distance between two perceptual hashes.
+    /// Supports variable-length byte arrays (handles 16-char legacy and 64-char new hashes).
+    /// Mismatched lengths return 64 — triggers one extra capture on first run after update.
     /// </summary>
     public static int HashDifference(string hash1, string hash2)
     {
         if (string.IsNullOrEmpty(hash1) || string.IsNullOrEmpty(hash2))
-            return 64; // Max difference
+            return 64;
+
+        // Treat old 16-char hashes vs new 64-char hashes as completely different.
+        // This causes one extra capture on first startup after update — harmless.
+        if (hash1.Length != hash2.Length)
+            return 64;
 
         try
         {
-            var h1 = Convert.ToUInt64(hash1, 16);
-            var h2 = Convert.ToUInt64(hash2, 16);
-            var xor = h1 ^ h2;
+            var bytes1 = Convert.FromHexString(hash1);
+            var bytes2 = Convert.FromHexString(hash2);
 
-            // Count set bits (Hamming weight)
             int count = 0;
-            while (xor != 0)
+            for (int i = 0; i < bytes1.Length; i++)
             {
-                count += (int)(xor & 1);
-                xor >>= 1;
+                int xor = bytes1[i] ^ bytes2[i];
+                while (xor != 0)
+                {
+                    count += xor & 1;
+                    xor >>= 1;
+                }
             }
             return count;
         }
