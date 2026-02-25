@@ -1,6 +1,6 @@
 {
   "capture": {
-    "captureIntervalSeconds": 5,
+    "captureIntervalSeconds": 3,
     "screenshotFormat": "webp",
     "screenshotQuality": 85,
     "maxScreenshotWidth": 2000,
