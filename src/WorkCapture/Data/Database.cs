@@ -388,6 +388,24 @@ public class Database : IDisposable
     }
 
     /// <summary>
+    /// Reset failed items back to pending so they will be retried,
+    /// up to maxRetries attempts.
+    /// </summary>
+    public int RequeueFailedItems(int maxRetries = 5)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            UPDATE sync_queue SET status = 'pending', error_message = NULL
+            WHERE status = 'failed' AND retry_count < @maxRetries
+        ";
+        cmd.Parameters.AddWithValue("@maxRetries", maxRetries);
+        return cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>
     /// Update capture event with vision analysis results
     /// </summary>
     public void UpdateEventVisionData(

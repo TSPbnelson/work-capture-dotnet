@@ -123,6 +123,11 @@ public class ApiSyncService : IDisposable
 
     private async Task ProcessSyncQueue()
     {
+        // Reset failed items that haven't hit the retry limit back to pending
+        var requeued = _db.RequeueFailedItems(maxRetries: 5);
+        if (requeued > 0)
+            Logger.Info($"Requeued {requeued} failed sync items for retry");
+
         var items = _db.GetPendingSyncItems(20);
 
         foreach (var item in items)

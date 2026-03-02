@@ -16,6 +16,7 @@ public class ActivityMonitor : IDisposable
     private int _keyboardCount;
     private int _mouseClickCount;
     private readonly object _lock = new();
+    private readonly DateTime _startTime = DateTime.Now;
 
     private bool _running;
 
@@ -155,7 +156,7 @@ public class ActivityMonitor : IDisposable
                     .ToList();
 
                 if (!times.Any())
-                    return double.MaxValue;
+                    return (DateTime.Now - _startTime).TotalSeconds;
 
                 return (DateTime.Now - times.Max()).TotalSeconds;
             }
