@@ -117,8 +117,10 @@ public class CaptureSettings
     /// <summary>Hash difference threshold (0-64, lower = stricter)</summary>
     public int ChangeDetectionThreshold { get; set; } = 5;
 
-    /// <summary>Seconds of inactivity before pausing captures (0 = disabled)</summary>
-    public int IdleTimeoutSeconds { get; set; } = 60;
+    /// <summary>Seconds of inactivity before pausing captures (0 = disabled).
+    /// Disabled by default — global keyboard/mouse hooks are unreliable on VMs and RDP sessions,
+    /// causing all captures to be silently skipped when the hook fails to register events.</summary>
+    public int IdleTimeoutSeconds { get; set; } = 0;
 }
 
 /// <summary>
