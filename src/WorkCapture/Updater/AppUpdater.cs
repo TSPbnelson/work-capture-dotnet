@@ -144,6 +144,7 @@ public class AppUpdater : IDisposable
                     goto waitloop
                 )
                 echo Updating WorkCapture to v{release.LatestVersion}...
+                if exist "{extractDir}\config" rd /s /q "{extractDir}\config"
                 xcopy /Y /E /I "{extractDir}\*" "{InstallDir}\"
                 echo Update complete. Starting WorkCapture...
                 start "" "{exePath}"

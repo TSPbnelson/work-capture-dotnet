@@ -80,8 +80,11 @@ public class ApiSyncService : IDisposable
         {
             try
             {
-                await DoSync();
-                _consecutiveSyncErrors = 0;
+                var syncOk = await DoSync();
+                if (syncOk)
+                    _consecutiveSyncErrors = 0;
+                else
+                    _consecutiveSyncErrors++;
             }
             catch (Exception ex)
             {
@@ -101,7 +104,7 @@ public class ApiSyncService : IDisposable
         }
     }
 
-    private async Task DoSync()
+    private async Task<bool> DoSync()
     {
         // Process pending queue items
         await ProcessSyncQueue();
@@ -110,9 +113,13 @@ public class ApiSyncService : IDisposable
         var today = DateTime.Today;
         var sessions = AggregateSessions(today);
 
+        int attempted = sessions.Count;
+        int succeeded = 0;
+
         foreach (var session in sessions)
         {
-            await SyncSession(session);
+            if (await SyncSession(session))
+                succeeded++;
         }
 
         // Upload screenshots if enabled
@@ -122,6 +129,9 @@ public class ApiSyncService : IDisposable
         }
 
         _lastSync = DateTime.Now;
+
+        // Healthy if nothing to sync, or at least one session synced successfully
+        return attempted == 0 || succeeded > 0;
     }
 
     private async Task ProcessSyncQueue()
@@ -165,7 +175,7 @@ public class ApiSyncService : IDisposable
         response.EnsureSuccessStatusCode();
     }
 
-    private async Task SyncSession(SessionData session)
+    private async Task<bool> SyncSession(SessionData session)
     {
         try
         {
@@ -191,6 +201,7 @@ public class ApiSyncService : IDisposable
             {
                 _totalSynced++;
                 Logger.Debug($"Synced session: {session.ClientCode} {session.Date}");
+                return true;
             }
             else
             {
@@ -199,6 +210,7 @@ public class ApiSyncService : IDisposable
 
                 // Queue for retry
                 _db.AddToSyncQueue("session", JsonSerializer.Serialize(payload));
+                return false;
             }
         }
         catch (Exception ex)
@@ -220,6 +232,7 @@ public class ApiSyncService : IDisposable
                 vision_confidence = session.VisionConfidence,
                 vision_description = session.VisionDescription
             }));
+            return false;
         }
     }
 

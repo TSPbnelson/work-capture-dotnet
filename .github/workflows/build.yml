@@ -55,6 +55,7 @@ jobs:
     - name: Create ZIP
       run: |
         cd release
+        rm -rf config
         zip -r ../WorkCapture-${{ github.ref_name }}-win-x64.zip .
 
     - name: Create Release
