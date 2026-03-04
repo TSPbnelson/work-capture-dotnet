@@ -28,7 +28,9 @@ public class ApiSyncService : IDisposable
 
         _client = new HttpClient
         {
-            BaseAddress = new Uri(settings.ApiUrl),
+            // Trailing slash is required — HttpClient BaseAddress with a path segment
+            // drops the path when combining with a leading-slash relative URL.
+            BaseAddress = new Uri(settings.ApiUrl.TrimEnd('/') + '/'),
             Timeout = TimeSpan.FromSeconds(30)
         };
 
@@ -163,8 +165,8 @@ public class ApiSyncService : IDisposable
     {
         var endpoint = item.EventType switch
         {
-            "session" => "/work-capture/sessions",
-            "entry" => "/work-capture/entries",
+            "session" => "work-capture/sessions",
+            "entry" => "work-capture/entries",
             _ => throw new ArgumentException($"Unknown event type: {item.EventType}")
         };
 
@@ -195,7 +197,7 @@ public class ApiSyncService : IDisposable
                 vision_description = session.VisionDescription
             };
 
-            var response = await _client.PostAsJsonAsync("/work-capture/sessions", payload);
+            var response = await _client.PostAsJsonAsync("work-capture/sessions", payload);
 
             if (response.IsSuccessStatusCode)
             {
@@ -374,7 +376,7 @@ public class ApiSyncService : IDisposable
         content.Add(new StringContent(clientCode ?? "GENERAL"), "client_code");
         content.Add(new StringContent(timestamp.ToString("O")), "timestamp");
 
-        var response = await _client.PostAsync("/work-capture/screenshots/upload", content);
+        var response = await _client.PostAsync("work-capture/screenshots/upload", content);
 
         if (response.IsSuccessStatusCode)
         {
