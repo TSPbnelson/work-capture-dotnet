@@ -196,6 +196,9 @@ public class TrayApplication : IDisposable
         _cts = new CancellationTokenSource();
         _captureTask = Task.Run(() => CaptureLoop(_cts.Token));
 
+        // Auto-update check 90s after startup (silent install, no prompt)
+        _ = AutoUpdateCheckAsync();
+
         UpdateTrayIcon(Color.LimeGreen, "Running");
         Logger.Info("Capture started");
     }
@@ -268,6 +271,15 @@ public class TrayApplication : IDisposable
         {
             Logger.Info($"[Status] idle={_activityMonitor.IdleSeconds:F0}s idleLimit={_settings.Capture.IdleTimeoutSeconds}s captures={_captureCount} skips={_skipCount}");
             _lastStatsLog = DateTime.Now;
+
+            // Update tray color based on sync health
+            var syncStatus = _syncService.GetStatus();
+            if (syncStatus.ConsecutiveSyncErrors >= 5)
+                UpdateTrayIcon(Color.Red, $"Sync Failed ({syncStatus.ConsecutiveSyncErrors} errors)");
+            else if (syncStatus.ConsecutiveSyncErrors >= 2)
+                UpdateTrayIcon(Color.Orange, "Sync Degraded");
+            else if (!_paused)
+                UpdateTrayIcon(Color.LimeGreen, "Running");
         }
 
         // Skip capture if user is idle
@@ -536,6 +548,64 @@ public class TrayApplication : IDisposable
             _settings.Capture.RetentionDays);
     }
 
+    /// <summary>
+    /// Silently check for and install updates 90 seconds after startup.
+    /// No user prompt — if an update is available it installs automatically.
+    /// </summary>
+    private async Task AutoUpdateCheckAsync()
+    {
+        await Task.Delay(TimeSpan.FromSeconds(90));
+
+        try
+        {
+            Logger.Info("Auto-update: checking for new version...");
+            var (release, error) = await _updater.CheckForUpdate();
+
+            if (release == null)
+            {
+                Logger.Warning($"Auto-update check failed: {error}");
+                return;
+            }
+
+            if (!release.UpdateAvailable)
+            {
+                Logger.Info($"Auto-update: already on latest version v{release.CurrentVersion}");
+                return;
+            }
+
+            Logger.Info($"Auto-update: v{release.LatestVersion} available, installing silently...");
+
+            if (_trayIcon != null)
+            {
+                _trayIcon.BalloonTipTitle = "Work Capture";
+                _trayIcon.BalloonTipText = $"Auto-installing update v{release.LatestVersion}...";
+                _trayIcon.ShowBalloonTip(5000);
+            }
+
+            var success = await _updater.DownloadAndInstall(release, msg =>
+            {
+                Logger.Info($"Auto-update: {msg}");
+            });
+
+            if (success)
+            {
+                Logger.Info("Auto-update: download complete, restarting...");
+                Stop();
+                if (_trayIcon != null)
+                    _trayIcon.Visible = false;
+                Application.Exit();
+            }
+            else
+            {
+                Logger.Warning("Auto-update: install failed");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning($"Auto-update check failed: {ex.Message}");
+        }
+    }
+
     #region Event Handlers
 
     private void OnPauseClick(object? sender, EventArgs e)
@@ -590,6 +660,12 @@ public class TrayApplication : IDisposable
             $"Sync pending: {syncStatus.PendingQueue}\n" +
             $"Interval: {_settings.Capture.CaptureIntervalSeconds}s (fixed)\n";
 
+        // Add sync health
+        if (syncStatus.ConsecutiveSyncErrors > 0)
+        {
+            message += $"Sync errors (consecutive): {syncStatus.ConsecutiveSyncErrors}\n";
+        }
+
         // Add vision stats if available
         if (_visionClient != null)
         {
@@ -598,6 +674,8 @@ public class TrayApplication : IDisposable
                        $"  Requests: {visionStats.TotalRequests}\n" +
                        $"  Success rate: {visionStats.SuccessRatePercent:F0}%\n" +
                        $"  Avg time: {visionStats.AverageTimeMs}ms\n";
+            if (visionStats.CircuitOpen)
+                message += $"  Circuit OPEN until: {visionStats.CircuitOpenUntil:HH:mm:ss}\n";
         }
 
         message += $"\nClients today:\n" +

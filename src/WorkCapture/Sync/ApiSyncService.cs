@@ -18,6 +18,7 @@ public class ApiSyncService : IDisposable
     private Task? _syncTask;
     private DateTime? _lastSync;
     private int _syncErrors;
+    private int _consecutiveSyncErrors;
     private int _totalSynced;
 
     public ApiSyncService(Database db, SyncSettings settings)
@@ -80,11 +81,13 @@ public class ApiSyncService : IDisposable
             try
             {
                 await DoSync();
+                _consecutiveSyncErrors = 0;
             }
             catch (Exception ex)
             {
                 Logger.Error($"Sync error: {ex.Message}");
                 _syncErrors++;
+                _consecutiveSyncErrors++;
             }
 
             try
@@ -411,7 +414,8 @@ public class ApiSyncService : IDisposable
             LastSync = _lastSync,
             SyncErrors = _syncErrors,
             TotalSynced = _totalSynced,
-            PendingQueue = _db.GetPendingSyncItems(100).Count
+            PendingQueue = _db.GetPendingSyncItems(5000).Count,
+            ConsecutiveSyncErrors = _consecutiveSyncErrors
         };
     }
 
@@ -453,4 +457,5 @@ public class SyncStatus
     public int SyncErrors { get; set; }
     public int TotalSynced { get; set; }
     public int PendingQueue { get; set; }
+    public int ConsecutiveSyncErrors { get; set; }
 }

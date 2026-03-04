@@ -21,6 +21,12 @@ public class VisionAnalysisClient : IDisposable
     private int _failedRequests;
     private long _totalTimeMs;
 
+    // Circuit breaker — open after 5 consecutive failures, resets after 10 minutes
+    private int _consecutiveFailures;
+    private DateTime? _circuitOpenUntil;
+    private const int CircuitBreakerThreshold = 5;
+    private static readonly TimeSpan CircuitBreakerDuration = TimeSpan.FromMinutes(10);
+
     public VisionAnalysisClient(VisionSettings settings)
     {
         _settings = settings;
@@ -77,6 +83,22 @@ public class VisionAnalysisClient : IDisposable
             };
         }
 
+        // Circuit breaker — skip requests while vision service is consistently failing
+        if (_circuitOpenUntil.HasValue)
+        {
+            if (DateTime.Now < _circuitOpenUntil.Value)
+            {
+                return new VisionAnalysisResult
+                {
+                    Success = false,
+                    Error = $"Vision circuit open — pausing until {_circuitOpenUntil.Value:HH:mm:ss}"
+                };
+            }
+            // Circuit expired, allow retry
+            _circuitOpenUntil = null;
+            Logger.Info("Vision circuit breaker reset — retrying service");
+        }
+
         _totalRequests++;
         var startTime = DateTime.Now;
 
@@ -120,6 +142,7 @@ public class VisionAnalysisClient : IDisposable
                 Logger.Warning($"Vision service error: {response.StatusCode} - {errorContent}");
 
                 _failedRequests++;
+                RecordVisionFailure();
                 return new VisionAnalysisResult
                 {
                     Success = false,
@@ -133,6 +156,7 @@ public class VisionAnalysisClient : IDisposable
             if (result == null)
             {
                 _failedRequests++;
+                RecordVisionFailure();
                 return new VisionAnalysisResult
                 {
                     Success = false,
@@ -146,6 +170,7 @@ public class VisionAnalysisClient : IDisposable
             if (result.Success)
             {
                 _successfulRequests++;
+                _consecutiveFailures = 0;
                 Logger.Debug($"Vision analysis: client={result.ClientCode}, " +
                              $"confidence={result.Confidence:F2}, " +
                              $"model={result.Model}, time={elapsed}ms");
@@ -153,6 +178,7 @@ public class VisionAnalysisClient : IDisposable
             else
             {
                 _failedRequests++;
+                RecordVisionFailure();
                 Logger.Warning($"Vision analysis failed: {result.Error}");
             }
 
@@ -163,6 +189,7 @@ public class VisionAnalysisClient : IDisposable
             var elapsed = (long)(DateTime.Now - startTime).TotalMilliseconds;
             _totalTimeMs += elapsed;
             _failedRequests++;
+            RecordVisionFailure();
 
             Logger.Warning($"Vision service timeout after {_settings.TimeoutSeconds}s");
 
@@ -178,6 +205,7 @@ public class VisionAnalysisClient : IDisposable
             var elapsed = (long)(DateTime.Now - startTime).TotalMilliseconds;
             _totalTimeMs += elapsed;
             _failedRequests++;
+            RecordVisionFailure();
 
             Logger.Error($"Vision service connection error: {ex.Message}");
 
@@ -193,6 +221,7 @@ public class VisionAnalysisClient : IDisposable
             var elapsed = (long)(DateTime.Now - startTime).TotalMilliseconds;
             _totalTimeMs += elapsed;
             _failedRequests++;
+            RecordVisionFailure();
 
             Logger.Error($"Vision analysis error: {ex.Message}");
 
@@ -202,6 +231,17 @@ public class VisionAnalysisClient : IDisposable
                 Error = ex.Message,
                 ResponseTimeMs = (int)elapsed
             };
+        }
+    }
+
+    private void RecordVisionFailure()
+    {
+        _consecutiveFailures++;
+        if (_consecutiveFailures >= CircuitBreakerThreshold)
+        {
+            _circuitOpenUntil = DateTime.Now.Add(CircuitBreakerDuration);
+            Logger.Warning($"Vision circuit breaker OPEN — {_consecutiveFailures} consecutive failures. " +
+                           $"Pausing until {_circuitOpenUntil.Value:HH:mm:ss}");
         }
     }
 
@@ -235,7 +275,9 @@ public class VisionAnalysisClient : IDisposable
             SuccessfulRequests = _successfulRequests,
             FailedRequests = _failedRequests,
             AverageTimeMs = avgTime,
-            SuccessRatePercent = successRate
+            SuccessRatePercent = successRate,
+            CircuitOpen = _circuitOpenUntil.HasValue && DateTime.Now < _circuitOpenUntil.Value,
+            CircuitOpenUntil = _circuitOpenUntil
         };
     }
 
@@ -324,4 +366,6 @@ public class VisionClientStats
     public int FailedRequests { get; set; }
     public long AverageTimeMs { get; set; }
     public double SuccessRatePercent { get; set; }
+    public bool CircuitOpen { get; set; }
+    public DateTime? CircuitOpenUntil { get; set; }
 }
