@@ -35,13 +35,14 @@ public class ClientDetector : IDisposable
 
     /// <summary>
     /// Detect client from available information
-    /// Uses ITDocs API first, falls back to local rules
+    /// Uses ITDocs API first, falls back to local rules, then machine default
     /// </summary>
     public ClientMatch? Detect(
         string? windowTitle = null,
         string? hostname = null,
         string? url = null,
-        string? ipAddress = null)
+        string? ipAddress = null,
+        string? defaultClientCode = null)
     {
         // Try ITDocs lookup first (async but we block here for simplicity)
         if (_itdocsLookup != null)
@@ -54,8 +55,8 @@ public class ClientDetector : IDisposable
             }
         }
 
-        // Fall back to local rules
-        return DetectFromLocalRules(windowTitle, hostname, url, ipAddress);
+        // Fall back to local rules (with machine default)
+        return DetectFromLocalRules(windowTitle, hostname, url, ipAddress, defaultClientCode);
     }
 
     /// <summary>
@@ -65,7 +66,8 @@ public class ClientDetector : IDisposable
         string? windowTitle = null,
         string? hostname = null,
         string? url = null,
-        string? ipAddress = null)
+        string? ipAddress = null,
+        string? defaultClientCode = null)
     {
         // Try ITDocs lookup first
         if (_itdocsLookup != null)
@@ -78,8 +80,8 @@ public class ClientDetector : IDisposable
             }
         }
 
-        // Fall back to local rules
-        return DetectFromLocalRules(windowTitle, hostname, url, ipAddress);
+        // Fall back to local rules (with machine default)
+        return DetectFromLocalRules(windowTitle, hostname, url, ipAddress, defaultClientCode);
     }
 
     private async Task<ClientMatch?> DetectFromITDocsAsync(string? windowTitle, string? hostname)
@@ -110,7 +112,8 @@ public class ClientDetector : IDisposable
         string? windowTitle,
         string? hostname,
         string? url,
-        string? ipAddress)
+        string? ipAddress,
+        string? defaultClientCode = null)
     {
         ClientMatch? bestMatch = null;
 
@@ -121,6 +124,19 @@ public class ClientDetector : IDisposable
             {
                 bestMatch = match;
             }
+        }
+
+        // If no rule matched, use the machine's default client code
+        if (bestMatch == null && !string.IsNullOrEmpty(defaultClientCode))
+        {
+            Logger.Debug($"No rule match — using machine default: {defaultClientCode}");
+            bestMatch = new ClientMatch
+            {
+                ClientCode = defaultClientCode,
+                Confidence = 0.50,
+                MatchedRule = "machine_default",
+                MatchedValue = defaultClientCode
+            };
         }
 
         return bestMatch;

@@ -21,6 +21,9 @@ public class VisionAnalysisClient : IDisposable
     private int _failedRequests;
     private long _totalTimeMs;
 
+    // Concurrency limiter — queue vision requests to prevent startup flood overwhelming Gemini
+    private static readonly SemaphoreSlim _concurrencyLimit = new SemaphoreSlim(1, 1);
+
     // Circuit breaker — open after 5 consecutive failures, resets after 10 minutes
     private int _consecutiveFailures;
     private DateTime? _circuitOpenUntil;
@@ -99,6 +102,10 @@ public class VisionAnalysisClient : IDisposable
             Logger.Info("Vision circuit breaker reset — retrying service");
         }
 
+        await _concurrencyLimit.WaitAsync();
+        try
+        {
+
         _totalRequests++;
         var startTime = DateTime.Now;
 
@@ -126,6 +133,7 @@ public class VisionAnalysisClient : IDisposable
                 ProcessName = processName,
                 Hostname = hostname,
                 Url = url,
+                MachineName = Environment.MachineName,
                 MediaType = mediaType,
                 ForceClaude = false
             };
@@ -232,6 +240,12 @@ public class VisionAnalysisClient : IDisposable
                 ResponseTimeMs = (int)elapsed
             };
         }
+
+        } // end semaphore try
+        finally
+        {
+            _concurrencyLimit.Release();
+        }
     }
 
     private void RecordVisionFailure()
@@ -306,6 +320,9 @@ public class VisionAnalyzeRequest
 
     [JsonPropertyName("url")]
     public string? Url { get; set; }
+
+    [JsonPropertyName("machine_name")]
+    public string? MachineName { get; set; }
 
     [JsonPropertyName("media_type")]
     public string MediaType { get; set; } = "image/png";

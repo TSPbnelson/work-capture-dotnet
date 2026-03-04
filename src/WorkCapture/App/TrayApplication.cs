@@ -335,7 +335,8 @@ public class TrayApplication : IDisposable
             var clientMatchMeta = _clientDetector.Detect(
                 windowTitle: windowInfo.Title,
                 hostname: windowInfo.Hostname,
-                url: windowInfo.Url);
+                url: windowInfo.Url,
+                defaultClientCode: _settings.Capture.DefaultClientCode);
 
             var metaEvt = new CaptureEvent
             {
@@ -407,7 +408,8 @@ public class TrayApplication : IDisposable
         var clientMatch = _clientDetector.Detect(
             windowTitle: windowInfo.Title,
             hostname: windowInfo.Hostname,
-            url: windowInfo.Url);
+            url: windowInfo.Url,
+            defaultClientCode: _settings.Capture.DefaultClientCode);
 
         // Record in database
         var evt = new CaptureEvent
@@ -514,7 +516,8 @@ public class TrayApplication : IDisposable
         var windowInfo = _windowExtractor.GetActiveWindowInfo();
         var clientMatch = _clientDetector.Detect(
             windowTitle: windowInfo.Title,
-            hostname: windowInfo.Hostname);
+            hostname: windowInfo.Hostname,
+            defaultClientCode: _settings.Capture.DefaultClientCode);
 
         var result = _screenCapture.Capture();
 

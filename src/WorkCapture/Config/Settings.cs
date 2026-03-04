@@ -121,6 +121,13 @@ public class CaptureSettings
     /// Disabled by default — global keyboard/mouse hooks are unreliable on VMs and RDP sessions,
     /// causing all captures to be silently skipped when the hook fails to register events.</summary>
     public int IdleTimeoutSeconds { get; set; } = 0;
+
+    /// <summary>
+    /// Default client code when no rule or vision match is found.
+    /// Set per-machine to the client this VM is dedicated to (e.g., "HMC" on HMC-VM).
+    /// Leave empty for mixed-use machines — sessions will be flagged for portal review.
+    /// </summary>
+    public string DefaultClientCode { get; set; } = "";
 }
 
 /// <summary>
