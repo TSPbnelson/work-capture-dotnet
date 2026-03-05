@@ -145,7 +145,7 @@ public class SyncSettings
     public int SyncIntervalSeconds { get; set; } = 60;
 
     /// <summary>Whether to sync screenshot files (large)</summary>
-    public bool SyncScreenshots { get; set; } = false;
+    public bool SyncScreenshots { get; set; } = true;
 }
 
 /// <summary>

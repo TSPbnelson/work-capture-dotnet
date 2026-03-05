@@ -362,9 +362,9 @@ public class ApiSyncService : IDisposable
             return;
         }
 
-        // Extract date and client from file path or database
+        // Extract date, client, and window title from file path or database
         var timestamp = File.GetCreationTime(screenshotPath);
-        string? clientCode = ExtractClientCodeFromPath(screenshotPath);
+        var (clientCode, windowTitle) = ExtractMetadataFromPath(screenshotPath);
 
         using var content = new MultipartFormDataContent();
         using var fileStream = File.OpenRead(screenshotPath);
@@ -375,6 +375,8 @@ public class ApiSyncService : IDisposable
         content.Add(streamContent, "file", Path.GetFileName(screenshotPath));
         content.Add(new StringContent(clientCode ?? "GENERAL"), "client_code");
         content.Add(new StringContent(timestamp.ToString("O")), "timestamp");
+        if (!string.IsNullOrEmpty(windowTitle))
+            content.Add(new StringContent(windowTitle), "window_title");
 
         var response = await _client.PostAsync("work-capture/screenshots/upload", content);
 
@@ -391,14 +393,15 @@ public class ApiSyncService : IDisposable
     }
 
     /// <summary>
-    /// Extract client code from screenshot filename or database
+    /// Extract client code and window title from database for a screenshot path
     /// </summary>
-    private string? ExtractClientCodeFromPath(string screenshotPath)
+    private (string? clientCode, string? windowTitle) ExtractMetadataFromPath(string screenshotPath)
     {
-        // Check database first
         var events = _db.GetEventsForDate(DateTime.Today);
         var evt = events.FirstOrDefault(e => e.ScreenshotPath == screenshotPath);
-        return evt?.ClientCode ?? evt?.VisionClientCode;
+        var clientCode = evt?.ClientCode ?? evt?.VisionClientCode;
+        var windowTitle = evt?.WindowTitle;
+        return (clientCode, windowTitle);
     }
 
     /// <summary>
