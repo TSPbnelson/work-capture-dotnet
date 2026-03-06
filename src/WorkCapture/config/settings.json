@@ -13,7 +13,8 @@
     "apiUrl": "https://msp.techserverpro.com/api",
     "apiKey": "",
     "syncIntervalSeconds": 60,
-    "maxRetries": 3
+    "maxRetries": 3,
+    "syncScreenshots": false
   },
   "storage": {
     "databasePath": "C:\\WorkCapture\\workcapture.db",
