@@ -50,7 +50,7 @@
       ]
     },
     {
-      "name": "Tech Server Pro",
+      "name": "Tier3 MSP",
       "code": "TSP",
       "rules": [
         { "type": "ip_range", "value": "192.168.1.0/24" },
@@ -58,6 +58,25 @@
         { "type": "hostname", "value": "rproxy" },
         { "type": "window_title", "value": ".*MSP.*Autopilot.*" },
         { "type": "url", "value": ".*techserverpro.*" }
+      ]
+    },
+    {
+      "name": "Keech Law (EdgeTech client)",
+      "code": "KEECH",
+      "rules": [
+        { "type": "hostname", "value": ".*keech.*" },
+        { "type": "hostname", "value": "KLF-.*" },
+        { "type": "url", "value": ".*keechlawfirm\\.com.*" },
+        { "type": "window_title", "value": ".*Keech.*" }
+      ]
+    },
+    {
+      "name": "Salter Construction (EdgeTech client)",
+      "code": "SALTER",
+      "rules": [
+        { "type": "hostname", "value": ".*salter.*" },
+        { "type": "url", "value": ".*salterconst\\.com.*" },
+        { "type": "window_title", "value": ".*Salter.*" }
       ]
     }
   ]

@@ -128,6 +128,14 @@ public class CaptureSettings
     /// Leave empty for mixed-use machines — sessions will be flagged for portal review.
     /// </summary>
     public string DefaultClientCode { get; set; } = "";
+
+    /// <summary>
+    /// Machine-dedicated billing client code. On a single-tenant VM, ALL work bills to this
+    /// client (e.g., "ETG" on EdgeTech-PC, "QTP" on QTP-VM). Applied at high confidence (0.70)
+    /// when no per-customer rule matches, so end-customer rules (e.g. KEECH/SALTER under ETG)
+    /// still refine which customer the session is for. Takes priority over DefaultClientCode.
+    /// </summary>
+    public string MachineDefaultClientCode { get; set; } = "";
 }
 
 /// <summary>
@@ -144,8 +152,8 @@ public class SyncSettings
     /// <summary>Seconds between sync attempts</summary>
     public int SyncIntervalSeconds { get; set; } = 60;
 
-    /// <summary>Whether to sync screenshot files (large)</summary>
-    public bool SyncScreenshots { get; set; } = false;
+    /// <summary>Whether to upload screenshot files to the portal (required for work-review descriptions).</summary>
+    public bool SyncScreenshots { get; set; } = true;
 }
 
 /// <summary>

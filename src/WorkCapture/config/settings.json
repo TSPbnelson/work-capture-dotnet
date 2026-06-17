@@ -14,7 +14,7 @@
     "apiKey": "",
     "syncIntervalSeconds": 60,
     "maxRetries": 3,
-    "syncScreenshots": false
+    "syncScreenshots": true
   },
   "storage": {
     "databasePath": "C:\\WorkCapture\\workcapture.db",

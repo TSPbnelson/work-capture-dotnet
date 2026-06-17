@@ -42,7 +42,8 @@ public class ClientDetector : IDisposable
         string? hostname = null,
         string? url = null,
         string? ipAddress = null,
-        string? defaultClientCode = null)
+        string? defaultClientCode = null,
+        string? machineDefaultClientCode = null)
     {
         // Try ITDocs lookup first (async but we block here for simplicity)
         if (_itdocsLookup != null)
@@ -55,8 +56,8 @@ public class ClientDetector : IDisposable
             }
         }
 
-        // Fall back to local rules (with machine default)
-        return DetectFromLocalRules(windowTitle, hostname, url, ipAddress, defaultClientCode);
+        // Fall back to local rules (with machine + legacy defaults)
+        return DetectFromLocalRules(windowTitle, hostname, url, ipAddress, defaultClientCode, machineDefaultClientCode);
     }
 
     /// <summary>
@@ -67,7 +68,8 @@ public class ClientDetector : IDisposable
         string? hostname = null,
         string? url = null,
         string? ipAddress = null,
-        string? defaultClientCode = null)
+        string? defaultClientCode = null,
+        string? machineDefaultClientCode = null)
     {
         // Try ITDocs lookup first
         if (_itdocsLookup != null)
@@ -80,8 +82,8 @@ public class ClientDetector : IDisposable
             }
         }
 
-        // Fall back to local rules (with machine default)
-        return DetectFromLocalRules(windowTitle, hostname, url, ipAddress, defaultClientCode);
+        // Fall back to local rules (with machine + legacy defaults)
+        return DetectFromLocalRules(windowTitle, hostname, url, ipAddress, defaultClientCode, machineDefaultClientCode);
     }
 
     private async Task<ClientMatch?> DetectFromITDocsAsync(string? windowTitle, string? hostname)
@@ -113,7 +115,8 @@ public class ClientDetector : IDisposable
         string? hostname,
         string? url,
         string? ipAddress,
-        string? defaultClientCode = null)
+        string? defaultClientCode = null,
+        string? machineDefaultClientCode = null)
     {
         ClientMatch? bestMatch = null;
 
@@ -126,10 +129,22 @@ public class ClientDetector : IDisposable
             }
         }
 
-        // If no rule matched, use the machine's default client code
-        if (bestMatch == null && !string.IsNullOrEmpty(defaultClientCode))
+        // No rule matched: fall back to a machine-level default.
+        // Prefer the dedicated-VM billing code (high confidence) over the legacy default.
+        if (bestMatch == null && !string.IsNullOrEmpty(machineDefaultClientCode))
         {
-            Logger.Debug($"No rule match — using machine default: {defaultClientCode}");
+            Logger.Debug($"No rule match — using machine billing default: {machineDefaultClientCode}");
+            bestMatch = new ClientMatch
+            {
+                ClientCode = machineDefaultClientCode,
+                Confidence = 0.70,
+                MatchedRule = "machine_default",
+                MatchedValue = machineDefaultClientCode
+            };
+        }
+        else if (bestMatch == null && !string.IsNullOrEmpty(defaultClientCode))
+        {
+            Logger.Debug($"No rule match — using legacy default: {defaultClientCode}");
             bestMatch = new ClientMatch
             {
                 ClientCode = defaultClientCode,

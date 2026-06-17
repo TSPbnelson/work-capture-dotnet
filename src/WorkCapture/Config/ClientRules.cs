@@ -123,6 +123,31 @@ public class ClientRulesConfig
                     new() { Type = "window_title", Value = "*techserverpro*" },
                 }
             },
+            // EdgeTech (ETG) end customers — billed to ETG via MachineDefaultClientCode on EdgeTech-PC;
+            // these rules refine which EdgeTech customer the session is for.
+            new()
+            {
+                Name = "Keech Law (EdgeTech client)",
+                Code = "KEECH",
+                Rules = new List<DetectionRule>
+                {
+                    new() { Type = "hostname", Value = "*keech*" },
+                    new() { Type = "hostname", Value = "KLF-*" },
+                    new() { Type = "url", Value = "*keechlawfirm.com*" },
+                    new() { Type = "window_title", Value = "*Keech*" },
+                }
+            },
+            new()
+            {
+                Name = "Salter Construction (EdgeTech client)",
+                Code = "SALTER",
+                Rules = new List<DetectionRule>
+                {
+                    new() { Type = "hostname", Value = "*salter*" },
+                    new() { Type = "url", Value = "*salterconst.com*" },
+                    new() { Type = "window_title", Value = "*Salter*" },
+                }
+            },
         }
     };
 
