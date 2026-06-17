@@ -83,7 +83,10 @@ public class Settings
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+        // Config files are camelCase (settings.json: captureIntervalSeconds, machineDefaultClientCode...).
+        // Must match, or NO settings bind and everything silently uses defaults.
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 }
