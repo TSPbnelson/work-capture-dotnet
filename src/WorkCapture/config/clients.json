@@ -78,6 +78,34 @@
         { "type": "url", "value": ".*salterconst\\.com.*" },
         { "type": "window_title", "value": ".*Salter.*" }
       ]
+    },
+    {
+      "name": "Additive CPA (Tier3 client)",
+      "code": "ACPA",
+      "rules": [
+        { "type": "url", "value": ".*additivecpa\\.com.*" },
+        { "type": "hostname", "value": ".*additive.*" },
+        { "type": "window_title", "value": ".*Additive CPA.*" }
+      ]
+    },
+    {
+      "name": "Joe Green / JG360 (Tier3 client)",
+      "code": "JG360",
+      "rules": [
+        { "type": "url", "value": ".*joegreenfitness360\\.com.*" },
+        { "type": "url", "value": ".*joegreenspeaks\\.com.*" },
+        { "type": "url", "value": ".*phyt4u\\.com.*" },
+        { "type": "url", "value": ".*parkinsonsexercisechecklist\\.com.*" },
+        { "type": "window_title", "value": ".*JG360.*" },
+        { "type": "window_title", "value": ".*Joe Green.*" }
+      ]
+    },
+    {
+      "name": "Stephen Snyder (Tier3 client)",
+      "code": "SNYDER",
+      "rules": [
+        { "type": "window_title", "value": ".*Snyder.*" }
+      ]
     }
   ]
 }

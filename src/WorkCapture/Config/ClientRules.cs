@@ -148,6 +148,41 @@ public class ClientRulesConfig
                     new() { Type = "window_title", Value = "*Salter*" },
                 }
             },
+            // Tier3 MSP DIRECT clients (Tier3-VM) — billed individually, no parent rollup.
+            new()
+            {
+                Name = "Additive CPA (Tier3 client)",
+                Code = "ACPA",
+                Rules = new List<DetectionRule>
+                {
+                    new() { Type = "url", Value = "*additivecpa.com*" },
+                    new() { Type = "hostname", Value = "*additive*" },
+                    new() { Type = "window_title", Value = "*Additive CPA*" },
+                }
+            },
+            new()
+            {
+                Name = "Joe Green / JG360 (Tier3 client)",
+                Code = "JG360",
+                Rules = new List<DetectionRule>
+                {
+                    new() { Type = "url", Value = "*joegreenfitness360.com*" },
+                    new() { Type = "url", Value = "*joegreenspeaks.com*" },
+                    new() { Type = "url", Value = "*phyt4u.com*" },
+                    new() { Type = "url", Value = "*parkinsonsexercisechecklist.com*" },
+                    new() { Type = "window_title", Value = "*JG360*" },
+                    new() { Type = "window_title", Value = "*Joe Green*" },
+                }
+            },
+            new()
+            {
+                Name = "Stephen Snyder (Tier3 client)",
+                Code = "SNYDER",
+                Rules = new List<DetectionRule>
+                {
+                    new() { Type = "window_title", Value = "*Snyder*" },
+                }
+            },
         }
     };
 
