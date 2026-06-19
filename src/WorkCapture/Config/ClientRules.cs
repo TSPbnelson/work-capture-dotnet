@@ -47,6 +47,7 @@ public class ClientRulesConfig
                     new() { Type = "ip_range", Value = "10.100.15.0/24" },
                     new() { Type = "hostname", Value = "*jnj*" },
                     new() { Type = "hostname", Value = "J-*" },
+                    new() { Type = "url", Value = "*jnjservices.com*" },
                     new() { Type = "window_title", Value = "*InTime*" },
                     new() { Type = "window_title", Value = "*JNJ*" },
                 }
@@ -87,6 +88,8 @@ public class ClientRulesConfig
                 Rules = new List<DetectionRule>
                 {
                     new() { Type = "hostname", Value = "*EPB*" },
+                    new() { Type = "url", Value = "*epbuilders.com*" },
+                    new() { Type = "url", Value = "*ecoperformancebuilders.com*" },
                     new() { Type = "window_title", Value = "*EP Builders*" },
                 }
             },
@@ -180,7 +183,27 @@ public class ClientRulesConfig
                 Code = "SNYDER",
                 Rules = new List<DetectionRule>
                 {
+                    new() { Type = "ip_range", Value = "23.239.13.187/32" },
+                    new() { Type = "ip_range", Value = "66.175.214.140/32" },
+                    new() { Type = "ip_range", Value = "45.79.22.205/32" },
+                    new() { Type = "ip_range", Value = "45.79.134.218/32" },
+                    new() { Type = "hostname", Value = "*stephensnyder*" },
+                    new() { Type = "hostname", Value = "*afterbankruptcy*" },
+                    new() { Type = "hostname", Value = "*bnbformula*" },
+                    new() { Type = "url", Value = "*stephensnyder.com*" },
+                    new() { Type = "url", Value = "*afterbankruptcy.com*" },
                     new() { Type = "window_title", Value = "*Snyder*" },
+                }
+            },
+            new()
+            {
+                Name = "Portage Sales (Tier3 client)",
+                Code = "PORTAGE",
+                Rules = new List<DetectionRule>
+                {
+                    new() { Type = "url", Value = "*portagesales.com*" },
+                    new() { Type = "hostname", Value = "PETER-WS" },
+                    new() { Type = "window_title", Value = "*Portage Sales*" },
                 }
             },
         }

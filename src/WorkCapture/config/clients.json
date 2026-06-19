@@ -7,6 +7,7 @@
         { "type": "ip_range", "value": "10.100.15.0/24" },
         { "type": "hostname", "value": ".*jnj.*" },
         { "type": "hostname", "value": "J-.*" },
+        { "type": "url", "value": ".*jnjservices\\.com.*" },
         { "type": "window_title", "value": ".*InTime.*" },
         { "type": "window_title", "value": ".*JNJ.*" }
       ]
@@ -38,6 +39,8 @@
       "code": "EPB",
       "rules": [
         { "type": "hostname", "value": ".*epb.*" },
+        { "type": "url", "value": ".*epbuilders\\.com.*" },
+        { "type": "url", "value": ".*ecoperformancebuilders\\.com.*" },
         { "type": "window_title", "value": ".*EP Builders.*" }
       ]
     },
@@ -104,7 +107,25 @@
       "name": "Stephen Snyder (Tier3 client)",
       "code": "SNYDER",
       "rules": [
+        { "type": "ip_range", "value": "23.239.13.187/32" },
+        { "type": "ip_range", "value": "66.175.214.140/32" },
+        { "type": "ip_range", "value": "45.79.22.205/32" },
+        { "type": "ip_range", "value": "45.79.134.218/32" },
+        { "type": "hostname", "value": ".*stephensnyder.*" },
+        { "type": "hostname", "value": ".*afterbankruptcy.*" },
+        { "type": "hostname", "value": ".*bnbformula.*" },
+        { "type": "url", "value": ".*stephensnyder\\.com.*" },
+        { "type": "url", "value": ".*afterbankruptcy\\.com.*" },
         { "type": "window_title", "value": ".*Snyder.*" }
+      ]
+    },
+    {
+      "name": "Portage Sales (Tier3 client)",
+      "code": "PORTAGE",
+      "rules": [
+        { "type": "url", "value": ".*portagesales\\.com.*" },
+        { "type": "hostname", "value": "PETER-WS" },
+        { "type": "window_title", "value": ".*Portage Sales.*" }
       ]
     }
   ]
