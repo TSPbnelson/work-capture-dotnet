@@ -2,7 +2,8 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- 10.0.19041.0 target enables WinRT projections (Windows.Media.Ocr) for on-device OCR -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <!-- UseWPF brings in System.Windows.Automation (UI Automation) for URL + UI-text capture -->
     <UseWPF>true</UseWPF>

@@ -387,7 +387,7 @@ public class ApiSyncService : IDisposable
             {
                 using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(sidecarPath));
                 var root = doc.RootElement;
-                foreach (var field in new[] { "url", "ui_text", "machine_name" })
+                foreach (var field in new[] { "url", "ui_text", "ocr_text", "machine_name" })
                 {
                     if (root.TryGetProperty(field, out var v) &&
                         v.ValueKind == System.Text.Json.JsonValueKind.String)

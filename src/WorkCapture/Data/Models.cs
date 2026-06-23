@@ -73,6 +73,7 @@ public class WindowInfo
     public string? Url { get; set; }
     public string? Hostname { get; set; }
     public string? UiText { get; set; }   // bounded UI Automation text from the foreground window
+    public string? OcrText { get; set; }  // bounded on-device OCR text (thin-signal frames only)
     public bool IsBrowser { get; set; }
     public bool IsTerminal { get; set; }
     public bool IsRemoteDesktop { get; set; }
