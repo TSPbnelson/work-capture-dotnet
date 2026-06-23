@@ -388,6 +388,11 @@ public class TrayApplication : IDisposable
             return;
         }
 
+        // Enrich with UI Automation signals (browser URL + foreground UI text) now that we've
+        // committed to saving this frame. Kept off the hot path — skipped/deduped frames and
+        // sensitive metadata-only captures never pay the (cross-process, slow) UIA cost.
+        _windowExtractor.EnrichForeground(windowInfo);
+
         // Save the screenshot to disk
         string? screenshotPath = null;
         string? imageHash = null;
@@ -433,6 +438,11 @@ public class TrayApplication : IDisposable
 
         _db.InsertCaptureEvent(evt);
 
+        // Write the text-signal sidecar next to the screenshot so the upload (later, from
+        // disk) and the server-side matcher can read the captured URL / UI text.
+        if (screenshotPath != null)
+            WriteSignalSidecar(screenshotPath, windowInfo, clientMatch?.ClientCode);
+
         // Update change detector with actual saved hash
         _changeDetector.RecordCapture(windowInfo.Title, windowInfo.ProcessName, imageHash);
 
@@ -463,6 +473,35 @@ public class TrayApplication : IDisposable
 
         Logger.Info($"Captured: {captureType} | {windowInfo.ProcessName} | " +
                     $"Client: {clientMatch?.ClientCode ?? "Unknown"} | Reason: {captureReason}");
+    }
+
+    /// <summary>
+    /// Write a JSON sidecar ({screenshot}.json) holding the captured text signals, so the
+    /// later disk-based upload and the server-side deterministic matcher can use them.
+    /// Best-effort: never throws into the capture loop.
+    /// </summary>
+    private static void WriteSignalSidecar(string screenshotPath, WindowInfo info, string? clientCode)
+    {
+        try
+        {
+            var payload = new
+            {
+                window_title = info.Title,
+                process = info.ProcessName,
+                url = info.Url,
+                ui_text = info.UiText,
+                hostname = info.Hostname,
+                client_code = clientCode,
+                machine_name = Environment.MachineName,
+                captured_at = DateTime.Now.ToString("O"),
+            };
+            File.WriteAllText(screenshotPath + ".json",
+                System.Text.Json.JsonSerializer.Serialize(payload));
+        }
+        catch (Exception ex)
+        {
+            Logger.Debug($"Sidecar write failed: {ex.Message}");
+        }
     }
 
     /// <summary>

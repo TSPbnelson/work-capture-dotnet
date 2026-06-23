@@ -72,6 +72,7 @@ public class WindowInfo
     public int ProcessId { get; set; }
     public string? Url { get; set; }
     public string? Hostname { get; set; }
+    public string? UiText { get; set; }   // bounded UI Automation text from the foreground window
     public bool IsBrowser { get; set; }
     public bool IsTerminal { get; set; }
     public bool IsRemoteDesktop { get; set; }

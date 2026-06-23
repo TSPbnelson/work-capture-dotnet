@@ -378,6 +378,32 @@ public class ApiSyncService : IDisposable
         if (!string.IsNullOrEmpty(windowTitle))
             content.Add(new StringContent(windowTitle), "window_title");
 
+        // Attach the capture-time text signals (URL / UI text / machine) from the sidecar so
+        // the server-side deterministic matcher can identify the client. Best-effort.
+        try
+        {
+            var sidecarPath = screenshotPath + ".json";
+            if (File.Exists(sidecarPath))
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(File.ReadAllText(sidecarPath));
+                var root = doc.RootElement;
+                foreach (var field in new[] { "url", "ui_text", "machine_name" })
+                {
+                    if (root.TryGetProperty(field, out var v) &&
+                        v.ValueKind == System.Text.Json.JsonValueKind.String)
+                    {
+                        var s = v.GetString();
+                        if (!string.IsNullOrEmpty(s))
+                            content.Add(new StringContent(s), field);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Debug($"Sidecar read failed for {Path.GetFileName(screenshotPath)}: {ex.Message}");
+        }
+
         var response = await _client.PostAsync("work-capture/screenshots/upload", content);
 
         if (response.IsSuccessStatusCode)

@@ -125,6 +125,34 @@ public class WindowInfoExtractor
     }
 
     /// <summary>
+    /// Enrich a WindowInfo with deterministic text signals from UI Automation:
+    /// the browser URL (for browser windows) and a bounded sample of foreground UI text.
+    /// Called ONLY for frames that are actually being saved (UIA is cross-process / slow),
+    /// and never for sensitive/metadata-only captures. Best-effort: failures leave fields null.
+    /// </summary>
+    public void EnrichForeground(WindowInfo info)
+    {
+        try
+        {
+            var hwnd = _lastHwnd != IntPtr.Zero ? _lastHwnd : GetForegroundWindow();
+            if (hwnd == IntPtr.Zero) return;
+
+            if (info.IsBrowser && string.IsNullOrEmpty(info.Url))
+                info.Url = UiaTextExtractor.GetBrowserUrl(hwnd);
+
+            info.UiText = UiaTextExtractor.GetForegroundText(hwnd);
+
+            // A hostname/IP may surface in the UI text even when the title didn't have one.
+            if (string.IsNullOrEmpty(info.Hostname) && !string.IsNullOrEmpty(info.UiText))
+                info.Hostname = ExtractHostname(info.UiText) ?? ExtractIpAddress(info.UiText);
+        }
+        catch (Exception ex)
+        {
+            Logger.Debug($"EnrichForeground failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// Check if the active window has changed since last check
     /// </summary>
     public bool HasWindowChanged()
