@@ -187,7 +187,7 @@ public class Database : IDisposable
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT * FROM capture_events
-            WHERE date(timestamp) = @date
+            WHERE date(timestamp, 'localtime') = @date
             ORDER BY timestamp ASC
         ";
         cmd.Parameters.AddWithValue("@date", date.ToString("yyyy-MM-dd"));
@@ -263,7 +263,7 @@ public class Database : IDisposable
 
         using (var cmd = conn.CreateCommand())
         {
-            cmd.CommandText = "SELECT COUNT(*) FROM capture_events WHERE date(timestamp) = @date";
+            cmd.CommandText = "SELECT COUNT(*) FROM capture_events WHERE date(timestamp, 'localtime') = @date";
             cmd.Parameters.AddWithValue("@date", today);
             stats.TodayEvents = Convert.ToInt32(cmd.ExecuteScalar());
         }
@@ -273,7 +273,7 @@ public class Database : IDisposable
             cmd.CommandText = @"
                 SELECT COALESCE(client_code, 'UNKNOWN') as client, COUNT(*) as count
                 FROM capture_events
-                WHERE date(timestamp) = @date
+                WHERE date(timestamp, 'localtime') = @date
                 GROUP BY client_code
             ";
             cmd.Parameters.AddWithValue("@date", today);
@@ -548,7 +548,7 @@ public class Database : IDisposable
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT screenshot_path FROM capture_events
-            WHERE date(timestamp) = @date
+            WHERE date(timestamp, 'localtime') = @date
               AND screenshot_path IS NOT NULL
               AND screenshot_path NOT IN (
                   SELECT screenshot_path FROM screenshot_uploads WHERE upload_status = 'success'
