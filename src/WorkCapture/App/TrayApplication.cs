@@ -393,13 +393,14 @@ public class TrayApplication : IDisposable
         // sensitive metadata-only captures never pay the (cross-process, slow) UIA cost.
         _windowExtractor.EnrichForeground(windowInfo);
 
-        // OCR only when the text signals are thin (no browser URL and little UI text) — e.g.
-        // RDP/native-app screens where the client name is visible on screen but not exposed via
-        // UI Automation. On-device, codec-free, run on the live frame before it's disposed.
-        if (string.IsNullOrEmpty(windowInfo.Url) && (windowInfo.UiText?.Length ?? 0) < 80)
-        {
-            windowInfo.OcrText = OcrExtractor.Recognize(memCapture.Image);
-        }
+        // OCR every saved frame. Frames are already perceptual-hash deduped (not every tick),
+        // so cost is bounded. The client's identity very often lives ONLY in pixels — web/RMM
+        // page content (e.g. a SuperOps client page, where the URL is generic and UIA only sees
+        // the browser chrome) and remote-session screens (Splashtop/RDP/ISL) that UIA can't read.
+        // The server-side matcher prefers stronger signals (URL/hostname/domain) over OCR'd
+        // names, so always OCR'ing only adds coverage, never degrades accuracy. On-device,
+        // codec-free, on the live frame before SaveFromMemory disposes it.
+        windowInfo.OcrText = OcrExtractor.Recognize(memCapture.Image);
 
         // Save the screenshot to disk
         string? screenshotPath = null;
