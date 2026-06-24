@@ -43,9 +43,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- UseWPF changes the SDK's implicit global-usings set and drops System.Net.Http;
-         restore it explicitly so existing HttpClient usages keep compiling. -->
+    <!-- UseWPF + the Windows SDK target alter the SDK's implicit global-usings set (System.IO,
+         System.Net.Http, etc. get dropped). Declare the standard usings explicitly so every
+         existing file keeps compiling regardless of the implicit-usings behavior. -->
+    <Using Include="System" />
+    <Using Include="System.Collections.Generic" />
+    <Using Include="System.IO" />
+    <Using Include="System.Linq" />
     <Using Include="System.Net.Http" />
+    <Using Include="System.Threading" />
+    <Using Include="System.Threading.Tasks" />
   </ItemGroup>
 
   <ItemGroup>
