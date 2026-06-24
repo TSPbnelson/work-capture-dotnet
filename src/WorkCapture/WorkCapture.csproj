@@ -43,6 +43,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- UseWPF changes the SDK's implicit global-usings set and drops System.Net.Http;
+         restore it explicitly so existing HttpClient usages keep compiling. -->
+    <Using Include="System.Net.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="config\settings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
