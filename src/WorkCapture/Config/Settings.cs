@@ -147,7 +147,7 @@ public class CaptureSettings
 public class SyncSettings
 {
     /// <summary>MSP Portal API base URL</summary>
-    public string ApiUrl { get; set; } = "https://msp.techserverpro.com/api";
+    public string ApiUrl { get; set; } = "https://autopilot.tier3msp.com/api";
 
     /// <summary>API authentication key</summary>
     public string ApiKey { get; set; } = "";

@@ -10,7 +10,7 @@
     "retentionDays": 30
   },
   "sync": {
-    "apiUrl": "https://msp.techserverpro.com/api",
+    "apiUrl": "https://autopilot.tier3msp.com/api",
     "apiKey": "",
     "syncIntervalSeconds": 60,
     "maxRetries": 3,
