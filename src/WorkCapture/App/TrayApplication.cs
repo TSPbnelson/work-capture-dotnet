@@ -300,25 +300,20 @@ public class TrayApplication : IDisposable
             return; // Don't count as skip, just ignore
         }
 
-        // Check privacy filter
+        // Privacy denylist (password managers, banking, etc.) + heuristic sensitive content
+        // are recorded as METADATA-ONLY: the time is logged (so the work stays billable) but
+        // NO screenshot is taken (so credentials/sensitive pixels never land on disk). [Decision B]
         var (excluded, reason) = _privacyFilter.ShouldExclude(
             windowInfo.ProcessName,
             windowInfo.Title,
             windowInfo.Url);
 
-        if (excluded)
-        {
-            Logger.Info($"Skip: privacy [{reason}] | proc={windowInfo.ProcessName} | title={windowInfo.Title}");
-            _skipCount++;
-            return;
-        }
-
         // Get activity state for metadata (NOT used as capture trigger)
         var keyboardActive = _activityMonitor.IsKeyboardActive;
         var mouseActive = _activityMonitor.IsMouseActive;
 
-        // Handle sensitive content - metadata only, no screenshot needed
-        if (_privacyFilter.IsSensitiveContent(windowInfo.Title, windowInfo.Url))
+        // Handle denylisted / sensitive content - metadata only, no screenshot needed
+        if (excluded || _privacyFilter.IsSensitiveContent(windowInfo.Title, windowInfo.Url))
         {
             // For metadata-only captures, check window change or max interval
             var (shouldCaptureMeta, metaReason) = _changeDetector.ShouldCapture(
@@ -349,7 +344,7 @@ public class TrayApplication : IDisposable
                 ClientCode = clientMatchMeta?.ClientCode,
                 ClientConfidence = clientMatchMeta?.Confidence ?? 0,
                 CaptureType = "metadata_only",
-                CaptureReason = metaReason,
+                CaptureReason = excluded ? $"privacy:{reason}" : metaReason,
                 KeyboardActive = keyboardActive,
                 MouseActive = mouseActive
             };

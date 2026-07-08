@@ -102,16 +102,28 @@ public class PrivacyRulesConfig
 
     private static PrivacyRulesConfig GetDefaults() => new()
     {
+        // NOTE: process names are matched WITHOUT the .exe extension (Process.ProcessName).
         ExcludedProcesses = new List<string>
         {
-            "1password.exe",
-            "bitwarden.exe",
-            "keepass.exe",
-            "lastpass.exe",
-            "dashlane.exe",
+            "1password",
+            "bitwarden",
+            "keeper",
+            "keeperpasswordmanager",
+            "keepass",
+            "lastpass",
+            "dashlane",
+            "credentialuibroker",
         },
         ExcludedTitlePatterns = new List<string>
         {
+            // Password managers (browser vaults + desktop apps)
+            "*Vaultwarden*",
+            "*Bitwarden*",
+            "*1Password*",
+            "*Keeper*",
+            "*KeePass*",
+            "*LastPass*",
+
             // Banking
             "*bank*login*",
             "*chase.com*",
@@ -120,43 +132,24 @@ public class PrivacyRulesConfig
             "*citibank.com*",
             "*capital one*",
 
-            // Password managers
-            "*Bitwarden*Vault*",
-            "*1Password*",
-            "*KeePass*",
-            "*LastPass*",
-
-            // Personal email
-            "*Gmail*Inbox*",
-            "*Outlook*Personal*",
-
-            // Healthcare
-            "*MyChart*",
-            "*patient portal*",
-            "*health records*",
-
-            // Financial
-            "*Fidelity*",
-            "*Vanguard*",
-            "*TurboTax*",
-            "*tax return*",
-
             // Sensitive
             "*password*visible*",
             "*show password*",
         },
         ExcludedUrlPatterns = new List<string>
         {
+            // Password managers
+            "*vault.edgetech.lan*",
+            "*bitwarden.com*",
+            "*1password.com*",
+            "*keepersecurity.com*",
+            "*keepersecurity.eu*",
+
+            // Banking
             "*online.chase.com*",
-            "*wellsfargo.com/online*",
-            "*bankofamerica.com/myaccount*",
+            "*wellsfargo.com*",
+            "*bankofamerica.com*",
             "*secure.*.bank*",
-            "*vault.bitwarden.com*",
-            "*my.1password.com*",
-            "*mail.google.com*",
-            "*outlook.live.com*",
-            "*mychart.*",
-            "*turbotax.com*",
         }
     };
 

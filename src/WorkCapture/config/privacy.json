@@ -1,41 +1,31 @@
 {
   "excluded_processes": [
-    "1Password",
-    "KeePass",
-    "Bitwarden",
-    "LastPass",
-    "CredentialUIBroker"
+    "1password",
+    "bitwarden",
+    "keeper",
+    "keeperpasswordmanager",
+    "keepass",
+    "lastpass",
+    "dashlane",
+    "credentialuibroker"
   ],
-  "excluded_window_titles": [
-    ".*password.*",
-    ".*sign.?in.*",
-    ".*log.?in.*",
-    ".*credential.*",
-    ".*bank.*",
-    ".*credit.?card.*",
-    ".*ssn.*",
-    ".*social.?security.*",
-    ".*private.?browsing.*",
-    ".*incognito.*"
+  "excluded_title_patterns": [
+    "*Vaultwarden*",
+    "*Bitwarden*",
+    "*1Password*",
+    "*Keeper*",
+    "*KeePass*",
+    "*LastPass*",
+    "*bank*login*"
   ],
-  "excluded_urls": [
-    ".*bank.*",
-    ".*paypal.*",
-    ".*chase\\.com.*",
-    ".*wellsfargo\\.com.*",
-    ".*capitalone\\.com.*",
-    ".*accounts\\.google\\.com.*",
-    ".*login\\.microsoftonline\\.com.*"
-  ],
-  "sensitive_keywords": [
-    "password",
-    "login",
-    "signin",
-    "sign-in",
-    "bank",
-    "account",
-    "credit card",
-    "ssn",
-    "social security"
+  "excluded_url_patterns": [
+    "*vault.edgetech.lan*",
+    "*bitwarden.com*",
+    "*1password.com*",
+    "*keepersecurity.com*",
+    "*keepersecurity.eu*",
+    "*online.chase.com*",
+    "*wellsfargo.com*",
+    "*bankofamerica.com*"
   ]
 }

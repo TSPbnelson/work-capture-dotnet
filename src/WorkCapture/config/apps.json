@@ -1,6 +1,6 @@
 {
-  "description": "Only capture when these apps are active. Empty list = capture all apps.",
-  "enabled": true,
+  "description": "DENYLIST MODEL: capture is NOT gated by this list. Everything is captured except what privacy.json excludes. This whitelist is disabled (enabled:false) so new tools (ISL, Splashtop, etc.) are never silently dropped. The allowedProcesses list is retained for reference / easy re-enable only.",
+  "enabled": false,
   "requireMaximized": false,
   "allowedProcesses": [
     "chrome",
@@ -10,6 +10,7 @@
     "strwinclt",
     "isl online for superops",
     "islonlineagentforsuperops",
+    "isllight",
     "putty",
     "winscp",
     "code",
@@ -27,6 +28,7 @@
     "strwinclt": "Splashtop Remote",
     "isl online for superops": "ISL Online for SuperOps (Client)",
     "islonlineagentforsuperops": "ISL Online Agent for SuperOps",
+    "isllight": "ISL Light (standalone)",
     "putty": "PuTTY SSH Client",
     "winscp": "WinSCP File Transfer",
     "code": "VS Code",

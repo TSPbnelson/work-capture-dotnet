@@ -96,7 +96,9 @@ public class AppFilterConfig
     {
         return new AppFilterConfig
         {
-            Enabled = true,
+            // Denylist model: whitelist disabled so no app is ever silently dropped.
+            // Capture gating is handled by privacy.json (what NOT to capture), not this list.
+            Enabled = false,
             RequireMaximized = false,
             AllowedProcesses = new List<string>
             {
@@ -107,6 +109,7 @@ public class AppFilterConfig
                 "strwinclt",
                 "isl online for superops",
                 "islonlineagentforsuperops",
+                "isllight",
                 "putty",
                 "winscp",
                 "code",
