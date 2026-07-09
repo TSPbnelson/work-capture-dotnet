@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using SharpHook;
 using SharpHook.Native;
 
@@ -141,13 +142,41 @@ public class ActivityMonitor : IDisposable
     /// </summary>
     public bool IsActive => IsKeyboardActive || IsMouseActive;
 
+    [StructLayout(LayoutKind.Sequential)]
+    private struct LASTINPUTINFO
+    {
+        public uint cbSize;
+        public uint dwTime;
+    }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetLastInputInfo(ref LASTINPUTINFO plii);
+
     /// <summary>
-    /// Get seconds since last activity
+    /// Get seconds since the last keyboard/mouse input.
+    ///
+    /// Uses the Win32 GetLastInputInfo API, which per Microsoft's docs reports
+    /// "session-specific user input for the session in which the calling thread is running."
+    /// This is reliable inside RDP sessions and VMs — unlike the SharpHook global hooks, which
+    /// frequently fail to register events over RDP and would make the agent think an actively
+    /// working user is idle (silently stopping capture). GetLastInputInfo is what the input-
+    /// activity capture model depends on.
+    ///
+    /// Falls back to the hook-based timestamps only if the API call fails.
     /// </summary>
     public double IdleSeconds
     {
         get
         {
+            var lii = new LASTINPUTINFO { cbSize = (uint)Marshal.SizeOf<LASTINPUTINFO>() };
+            if (GetLastInputInfo(ref lii))
+            {
+                // Unsigned subtraction handles GetTickCount wraparound (~24.9 days) correctly.
+                uint idleMs = unchecked((uint)Environment.TickCount) - lii.dwTime;
+                return idleMs / 1000.0;
+            }
+
             lock (_lock)
             {
                 var times = new[] { _lastKeyboardTime, _lastMouseTime }

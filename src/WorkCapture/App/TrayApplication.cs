@@ -373,9 +373,14 @@ public class TrayApplication : IDisposable
             windowInfo.ProcessName,
             currentHash: memCapture.Hash);
 
-        if (!shouldCapture)
+        // v1.9.0 input-activity model: we only reach here if the user is active (the idle gate
+        // above returned early once idle > IdleTimeoutSeconds). Save on the fixed interval for
+        // ACCURATE TIME — not only when the screen changes. A static-but-active screen (reading a
+        // vCenter page, an iDRAC log) still gets a frame every interval, so that working time is
+        // measured instead of counting as zero. Only the minimum-interval rate limit still skips;
+        // near-identical frames are deduped later at analysis so vision cost stays bounded.
+        if (captureReason == "min_interval")
         {
-            // Discard the in-memory screenshot
             var hashForLog = memCapture.Hash;
             memCapture.Dispose();
             Logger.Info($"Skip: [{captureReason}] | proc={windowInfo.ProcessName} | hash={hashForLog}");

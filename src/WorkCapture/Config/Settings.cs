@@ -96,8 +96,11 @@ public class Settings
 /// </summary>
 public class CaptureSettings
 {
-    /// <summary>Seconds between capture checks</summary>
-    public int CaptureIntervalSeconds { get; set; } = 3;
+    /// <summary>Seconds between capture checks. 7s = the input-activity model's cadence:
+    /// while the user is active a frame is saved every ~7s (dense enough to measure real
+    /// working time, incl. reading static screens); near-identical frames are deduped at
+    /// analysis so vision cost stays bounded.</summary>
+    public int CaptureIntervalSeconds { get; set; } = 7;
 
     /// <summary>Capture when window title changes</summary>
     public bool CaptureOnWindowChange { get; set; } = true;
@@ -121,9 +124,10 @@ public class CaptureSettings
     public int ChangeDetectionThreshold { get; set; } = 5;
 
     /// <summary>Seconds of inactivity before pausing captures (0 = disabled).
-    /// Disabled by default — global keyboard/mouse hooks are unreliable on VMs and RDP sessions,
-    /// causing all captures to be silently skipped when the hook fails to register events.</summary>
-    public int IdleTimeoutSeconds { get; set; } = 0;
+    /// 90s: capture runs while you're active and stops after 90s with no keyboard/mouse input,
+    /// so idle time isn't billed. Safe to enable now that idle detection uses GetLastInputInfo
+    /// (session-aware, reliable over RDP) instead of global hooks — see ActivityMonitor.</summary>
+    public int IdleTimeoutSeconds { get; set; } = 90;
 
     /// <summary>
     /// Default client code when no rule or vision match is found.
