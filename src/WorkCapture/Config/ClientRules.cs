@@ -70,19 +70,6 @@ public class ClientRulesConfig
             },
             new()
             {
-                Name = "Hotel McCoy",
-                Code = "HMC",
-                Rules = new List<DetectionRule>
-                {
-                    new() { Type = "ip_range", Value = "192.168.10.0/24" },
-                    new() { Type = "url", Value = "*cloudbeds*" },
-                    new() { Type = "hostname", Value = "*HMC*" },
-                    new() { Type = "window_title", Value = "*Hotel McCoy*" },
-                    new() { Type = "window_title", Value = "*Cloudbeds*" },
-                }
-            },
-            new()
-            {
                 Name = "EP Builders",
                 Code = "EPB",
                 Rules = new List<DetectionRule>

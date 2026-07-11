@@ -25,16 +25,6 @@
       ]
     },
     {
-      "name": "Hotel McCoy",
-      "code": "HMC",
-      "rules": [
-        { "type": "ip_range", "value": "192.168.10.0/24" },
-        { "type": "url", "value": ".*cloudbeds.*" },
-        { "type": "hostname", "value": ".*HMC.*" },
-        { "type": "window_title", "value": ".*Hotel McCoy.*" }
-      ]
-    },
-    {
       "name": "EP Builders",
       "code": "EPB",
       "rules": [

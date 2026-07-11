@@ -138,15 +138,6 @@ if (-not (Test-Path "$ConfigDir\clients.json")) {
 {
   "clients": [
     {
-      "code": "HMC",
-      "name": "Hotel McCoy",
-      "patterns": {
-        "window_titles": ["Hotel McCoy", "HMC", "Cloudbeds"],
-        "hostnames": ["HMC-*"],
-        "urls": ["*.hotelmccoy.com"]
-      }
-    },
-    {
       "code": "JNJ",
       "name": "JNJ Services",
       "patterns": {
