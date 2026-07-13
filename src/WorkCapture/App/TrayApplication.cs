@@ -38,6 +38,7 @@ public class TrayApplication : IDisposable
     // Tray
     private NotifyIcon? _trayIcon;
     private ContextMenuStrip? _contextMenu;
+    private readonly Dictionary<Color, Icon> _iconCache = new();
 
     // State
     private bool _running;
@@ -146,7 +147,7 @@ public class TrayApplication : IDisposable
         // Create tray icon
         _trayIcon = new NotifyIcon
         {
-            Icon = CreateIcon(Color.LimeGreen),
+            Icon = GetIcon(Color.LimeGreen),
             Text = "Work Capture - Running",
             Visible = true,
             ContextMenuStrip = _contextMenu
@@ -155,21 +156,40 @@ public class TrayApplication : IDisposable
         _trayIcon.DoubleClick += OnShowStatsClick;
     }
 
-    private static Icon CreateIcon(Color color)
+    /// <summary>
+    /// Get a tray icon of the given color, building it once and caching it thereafter.
+    ///
+    /// Icons are cached (NOT recreated per call) because Bitmap.GetHicon() allocates a native
+    /// GDI icon handle that Icon.FromHandle() does NOT take ownership of and does NOT free on
+    /// Dispose. The previous code recreated the icon on every 60s status refresh, leaking one
+    /// GDI handle per minute (~1,440/day). Windows caps a process at 10,000 GDI handles, so the
+    /// agent hit the ceiling in ~a week — after which EVERY GDI+ call in the process failed with
+    /// "A generic error occurred in GDI+" (screen capture AND tray-menu paint alike), locking up
+    /// capture until a restart. Caching bounds handle use to one per distinct color for the whole
+    /// process lifetime, so the leak can no longer grow.
+    /// </summary>
+    private Icon GetIcon(Color color)
     {
+        if (_iconCache.TryGetValue(color, out var cached))
+            return cached;
+
         using var bitmap = new Bitmap(16, 16);
         using var graphics = Graphics.FromImage(bitmap);
         graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
         using var brush = new SolidBrush(color);
         graphics.FillEllipse(brush, 1, 1, 14, 14);
-        return Icon.FromHandle(bitmap.GetHicon());
+
+        var icon = Icon.FromHandle(bitmap.GetHicon());
+        _iconCache[color] = icon;
+        return icon;
     }
 
     private void UpdateTrayIcon(Color color, string status)
     {
         if (_trayIcon != null)
         {
-            _trayIcon.Icon = CreateIcon(color);
+            // Cached icon — do NOT dispose the previous one; it's shared and reused.
+            _trayIcon.Icon = GetIcon(color);
             _trayIcon.Text = $"Work Capture - {status}";
         }
 
@@ -821,6 +841,9 @@ public class TrayApplication : IDisposable
         Stop();
         _trayIcon?.Dispose();
         _contextMenu?.Dispose();
+        foreach (var icon in _iconCache.Values)
+            icon.Dispose();
+        _iconCache.Clear();
         _screenCapture.Dispose();
         _activityMonitor.Dispose();
         _clientDetector.Dispose();
