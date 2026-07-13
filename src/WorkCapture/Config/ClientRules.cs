@@ -102,8 +102,8 @@ public class ClientRulesConfig
             },
             new()
             {
-                Name = "Tech Server Pro",
-                Code = "TSP",
+                Name = "Tier3 MSP",
+                Code = "TIER3",
                 Rules = new List<DetectionRule>
                 {
                     new() { Type = "ip_range", Value = "192.168.1.0/24" },

@@ -44,7 +44,7 @@
     },
     {
       "name": "Tier3 MSP",
-      "code": "TSP",
+      "code": "TIER3",
       "rules": [
         { "type": "ip_range", "value": "192.168.1.0/24" },
         { "type": "hostname", "value": "claudellama" },
