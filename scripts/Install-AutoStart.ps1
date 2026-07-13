@@ -29,6 +29,7 @@ $ErrorActionPreference = 'Stop'
 
 $Exe          = 'C:\WorkCapture\WorkCapture.exe'
 $WatchdogPs1  = 'C:\WorkCapture\watchdog.ps1'
+$WatchdogVbs  = 'C:\WorkCapture\watchdog-hidden.vbs'
 $AutoStartTN  = 'WorkCapture AutoStart'
 $WatchdogTN   = 'WorkCapture Watchdog'
 
@@ -46,10 +47,23 @@ if (-not (Get-Process WorkCapture -ErrorAction SilentlyContinue)) {
 "@ | Set-Content -Path $WatchdogPs1 -Encoding ASCII
 Write-Host "Wrote watchdog: $WatchdogPs1" -ForegroundColor Gray
 
+# 1b. Write a VBScript launcher that runs the watchdog with NO visible window.
+#     Launching powershell.exe directly from the task flashes a console window every time it
+#     fires (every 5 min) - even with -WindowStyle Hidden, because that flag only hides the
+#     host window AFTER the process starts, so conhost blinks first. wscript's Run(cmd, 0, False)
+#     starts it hidden from the first frame (0 = hidden window, False = fire-and-forget), so
+#     there is no flash at all. This is the fix for the recurring PowerShell popup.
+@"
+' Launch the WorkCapture watchdog with no visible window.
+CreateObject("WScript.Shell").Run "powershell.exe -NoProfile -ExecutionPolicy Bypass -File ""$WatchdogPs1""", 0, False
+"@ | Set-Content -Path $WatchdogVbs -Encoding ASCII
+Write-Host "Wrote hidden launcher: $WatchdogVbs" -ForegroundColor Gray
+
 # 2. Register the two scheduled tasks. Path has no spaces, so no inner quoting needed.
 #    Omitting /RU makes the task run as the current user, only when logged on
 #    (interactive session) - required for screen capture.
-$tr = "powershell.exe -NoProfile -WindowStyle Hidden -File $WatchdogPs1"
+#    Launch via wscript + the .vbs so the task never flashes a console window.
+$tr = "wscript.exe $WatchdogVbs"
 
 schtasks.exe /Create /TN $AutoStartTN /TR $tr /SC ONLOGON /RL LIMITED /F | Out-Null
 Write-Host "Registered '$AutoStartTN' (start at logon)." -ForegroundColor Green
