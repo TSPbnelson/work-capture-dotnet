@@ -54,22 +54,6 @@ public class ClientRulesConfig
             },
             new()
             {
-                Name = "NLT (LearningMatters)",
-                Code = "NLT",
-                Rules = new List<DetectionRule>
-                {
-                    new() { Type = "ip_range", Value = "192.168.100.0/24" },
-                    new() { Type = "ip_range", Value = "192.168.44.0/22" },
-                    new() { Type = "ip_range", Value = "192.168.92.0/24" },
-                    new() { Type = "window_title", Value = "*FortiGate*" },
-                    new() { Type = "window_title", Value = "*LearningMatters*" },
-                    new() { Type = "hostname", Value = "*-eg*" },
-                    new() { Type = "hostname", Value = "*-cg*" },
-                    new() { Type = "hostname", Value = "*-em*" },
-                }
-            },
-            new()
-            {
                 Name = "EP Builders",
                 Code = "EPB",
                 Rules = new List<DetectionRule>

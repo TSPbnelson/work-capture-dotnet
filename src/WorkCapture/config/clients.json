@@ -13,18 +13,6 @@
       ]
     },
     {
-      "name": "NLT (LearningMatters)",
-      "code": "NLT",
-      "rules": [
-        { "type": "ip_range", "value": "192.168.100.0/24" },
-        { "type": "ip_range", "value": "192.168.44.0/22" },
-        { "type": "ip_range", "value": "192.168.92.0/24" },
-        { "type": "window_title", "value": ".*FortiGate.*" },
-        { "type": "window_title", "value": ".*M370.*" },
-        { "type": "window_title", "value": ".*LearningMatters.*" }
-      ]
-    },
-    {
       "name": "EP Builders",
       "code": "EPB",
       "rules": [

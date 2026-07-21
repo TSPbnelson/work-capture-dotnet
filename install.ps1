@@ -145,15 +145,6 @@ if (-not (Test-Path "$ConfigDir\clients.json")) {
         "hostnames": ["J-*", "QTP-*"],
         "urls": ["*.jnjtransportation.com"]
       }
-    },
-    {
-      "code": "NLT",
-      "name": "Next Level Tech",
-      "patterns": {
-        "window_titles": ["Next Level", "NLT", "LearningMatters"],
-        "hostnames": ["NLT-*"],
-        "urls": ["*.learningmatters-ed.org"]
-      }
     }
   ]
 }
