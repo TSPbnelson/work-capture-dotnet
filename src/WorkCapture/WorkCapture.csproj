@@ -12,8 +12,8 @@
     <!-- <ApplicationIcon>Resources\icon.ico</ApplicationIcon> -->
     <AssemblyName>WorkCapture</AssemblyName>
     <RootNamespace>WorkCapture</RootNamespace>
-    <Version>1.9.5</Version>
-    <AssemblyVersion>1.9.5</AssemblyVersion>
+    <Version>1.9.6</Version>
+    <AssemblyVersion>1.9.6</AssemblyVersion>
     <Company>Tier3 MSP</Company>
     <Product>Work Capture</Product>
     <Description>Real-time work tracking and screenshot capture for MSP billing</Description>
@@ -56,6 +56,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Ships at ZIP root (survives the build's `rm -rf config`) as a fill-in-one-field template. -->
+    <None Update="settings.example.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="config\settings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

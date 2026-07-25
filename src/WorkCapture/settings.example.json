@@ -1,0 +1,26 @@
+{
+  "_comment": "TEMPLATE — copy this file to 'settings.json' at C:\\WorkCapture\\settings.json, then set 'machineDefaultClientCode' to THIS VM's client code (e.g. QTP, ETG, TIER3, SDV). That is the ONLY field you change per machine; everything else is identical fleet-wide. 'apiKey' is intentionally blank — the ingestion endpoints don't require it. Unknown keys like this _comment are ignored by the agent.",
+  "capture": {
+    "machineDefaultClientCode": "",
+    "screenshotFormat": "webp",
+    "screenshotQuality": 85,
+    "maxScreenshotWidth": 2000,
+    "changeDetectionThreshold": 3,
+    "keyboardActivityWindowMs": 500,
+    "captureOnKeyboardActivity": true,
+    "retentionDays": 30,
+    "captureIntervalSeconds": 7,
+    "idleTimeoutSeconds": 90
+  },
+  "sync": {
+    "apiUrl": "https://autopilot.tier3msp.com/api",
+    "apiKey": "",
+    "syncIntervalSeconds": 60,
+    "syncScreenshots": true,
+    "maxRetries": 3
+  },
+  "storage": {
+    "databasePath": "C:\\WorkCapture\\workcapture.db",
+    "screenshotDir": "C:\\WorkCapture\\screenshots"
+  }
+}
