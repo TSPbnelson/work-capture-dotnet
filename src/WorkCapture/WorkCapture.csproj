@@ -12,8 +12,8 @@
     <!-- <ApplicationIcon>Resources\icon.ico</ApplicationIcon> -->
     <AssemblyName>WorkCapture</AssemblyName>
     <RootNamespace>WorkCapture</RootNamespace>
-    <Version>1.9.6</Version>
-    <AssemblyVersion>1.9.6</AssemblyVersion>
+    <Version>1.9.7</Version>
+    <AssemblyVersion>1.9.7</AssemblyVersion>
     <Company>Tier3 MSP</Company>
     <Product>Work Capture</Product>
     <Description>Real-time work tracking and screenshot capture for MSP billing</Description>
@@ -58,6 +58,10 @@
   <ItemGroup>
     <!-- Ships at ZIP root (survives the build's `rm -rf config`) as a fill-in-one-field template. -->
     <None Update="settings.example.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- Bundle the on-VM watchdog installer at ZIP root so setup is self-contained (no irm fetch). -->
+    <None Include="..\..\scripts\Install-AutoStart.ps1" Link="Install-AutoStart.ps1">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="config\settings.json">
