@@ -105,6 +105,16 @@
         { "type": "hostname", "value": "PETER-WS" },
         { "type": "window_title", "value": ".*Portage Sales.*" }
       ]
+    },
+    {
+      "name": "Sky Data Vault",
+      "code": "SDV",
+      "rules": [
+        { "type": "hostname", "value": ".*SkyDataVault.*" },
+        { "type": "window_title", "value": ".*Sky Data Vault.*" },
+        { "type": "window_title", "value": ".*SkyDataVault.*" },
+        { "type": "url", "value": ".*skydatavault\\.com.*" }
+      ]
     }
   ]
 }

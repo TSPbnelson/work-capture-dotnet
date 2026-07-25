@@ -177,6 +177,18 @@ public class ClientRulesConfig
                     new() { Type = "window_title", Value = "*Portage Sales*" },
                 }
             },
+            new()
+            {
+                Name = "Sky Data Vault",
+                Code = "SDV",
+                Rules = new List<DetectionRule>
+                {
+                    new() { Type = "hostname", Value = "*SkyDataVault*" },
+                    new() { Type = "window_title", Value = "*Sky Data Vault*" },
+                    new() { Type = "window_title", Value = "*SkyDataVault*" },
+                    new() { Type = "url", Value = "*skydatavault.com*" },
+                }
+            },
         }
     };
 
