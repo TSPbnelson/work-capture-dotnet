@@ -32,7 +32,10 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
-| #620 | 7:54 PM | ✅ | WorkCapture version bumped to 1.4.8 | ~248 |
+| #631 | 8:28 PM | 🔴 | Fixed timer precision to achieve true capture intervals | ~445 |
+| #622 | 7:54 PM | 🔄 | Implemented fixed-interval timer with pure change detection replacing adaptive rate system | ~559 |
+| #621 | " | 🔄 | Removed adaptive rate system in favor of fixed-interval timer with pure change detection | ~570 |
+| #620 | " | ✅ | WorkCapture version bumped to 1.4.8 | ~248 |
 | #612 | 7:53 PM | ✅ | Version bumped to 1.4.8 for adaptive rate removal fix | ~253 |
 | #595 | 2:35 PM | 🔴 | Fixed max capture interval to match timer interval for proper TimeSnapper behavior | ~463 |
 | #594 | " | ✅ | Version bumped to 1.4.7 for AppUpdater token management feature | ~234 |

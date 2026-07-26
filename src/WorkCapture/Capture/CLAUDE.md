@@ -24,6 +24,9 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #650 | 10:02 PM | 🔵 | WorkCapture sync architecture and API integration comprehensively documented | ~608 |
+| #622 | 7:54 PM | 🔄 | Implemented fixed-interval timer with pure change detection replacing adaptive rate system | ~559 |
+| #621 | " | 🔄 | Removed adaptive rate system in favor of fixed-interval timer with pure change detection | ~570 |
 | #616 | 7:53 PM | ✅ | Updated ChangeDetector documentation to clarify save decision and max interval purpose | ~326 |
 | #615 | " | ✅ | Updated ChangeDetector documentation to clarify fixed-interval timer usage | ~358 |
 | #611 | " | 🔄 | Removed AdaptiveCaptureRate class from ChangeDetector.cs | ~407 |

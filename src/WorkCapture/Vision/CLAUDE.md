@@ -7,5 +7,14 @@
 
 | ID | Time | T | Title | Read |
 |----|------|---|-------|------|
+| #128 | 2:57 PM | 🔵 | Vision Analysis Client with Base64 Encoding and Comprehensive Error Handling | ~743 |
+| #127 | " | 🔵 | Complete Work Capture System Pipeline - Screenshot to Invoice Flow | ~1089 |
 | #120 | 2:56 PM | 🔵 | Vision Analysis Client HTTP Integration Layer | ~608 |
+| #76 | 11:28 AM | 🔵 | WorkCapture .NET Vision Client Implementation | ~638 |
+
+### Feb 7, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #650 | 10:02 PM | 🔵 | WorkCapture sync architecture and API integration comprehensively documented | ~608 |
 </claude-mem-context>

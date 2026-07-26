@@ -22,4 +22,13 @@
 |----|------|---|-------|------|
 | #510 | 2:58 PM | 🔴 | Implemented TimeSnapper-style capture logic removing keyboard activity as trigger | ~706 |
 | #496 | 2:56 PM | 🔵 | Settings configuration includes CaptureOnKeyboardActivity toggle controlling activity-based capture triggers | ~513 |
+
+### Feb 7, 2026
+
+| ID | Time | T | Title | Read |
+|----|------|---|-------|------|
+| #650 | 10:02 PM | 🔵 | WorkCapture sync architecture and API integration comprehensively documented | ~608 |
+| #643 | 10:01 PM | ✅ | Changed default capture interval from 5 seconds to 3 seconds | ~295 |
+| #623 | 8:23 PM | 🔵 | Current capture interval configuration discovered at 5 seconds default | ~352 |
+| #621 | 7:54 PM | 🔄 | Removed adaptive rate system in favor of fixed-interval timer with pure change detection | ~570 |
 </claude-mem-context>
