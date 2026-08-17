@@ -2,14 +2,28 @@
 # Downloads latest release, installs to C:\WorkCapture, adds to startup
 #
 # Usage:
-#   powershell -ExecutionPolicy Bypass -File install.ps1 -Token "ghp_xxxxx"
+#   powershell -ExecutionPolicy Bypass -File install.ps1 -ClientCode "ETG" -Token "ghp_xxxxx"
+#
+# -ClientCode is MANDATORY and is this machine's BILLING ANCHOR. One VM serves exactly one
+# tenant: 100% of work on that VM bills to this client and its sub-clients. Get it wrong and
+# the machine bills a whole tenant's work to the wrong MSP.
+#
+# After installing you must ALSO register the machine server-side, or nothing locks it:
+#   INSERT INTO capture_machines (machine_name, anchor_code) VALUES ('<HOSTNAME>', '<CODE>');
 #
 # The GitHub token needs 'repo' scope for private repo access.
 # Token is saved to config for future in-app updates.
 
 param(
+    [Parameter(Mandatory=$true)]
+    [ValidatePattern('^[A-Za-z0-9_-]{2,10}$')]
+    [string]$ClientCode,
+
+    [string]$ApiKey = "",
     [string]$Token = ""
 )
+
+$ClientCode = $ClientCode.ToUpper()
 
 $ErrorActionPreference = "Stop"
 $InstallDir = "C:\WorkCapture"
@@ -18,7 +32,7 @@ $Repo = "TSPbnelson/work-capture-dotnet"
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  WorkCapture Installer" -ForegroundColor Cyan
-Write-Host "  Tech Server Pro" -ForegroundColor Cyan
+Write-Host "  Tier3 MSP" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -91,45 +105,32 @@ if (-not (Test-Path $ConfigDir)) {
 
 if (-not (Test-Path "$ConfigDir\settings.json")) {
     Write-Host "Creating default settings.json..." -ForegroundColor White
+
+    # ⛔ KEYS MUST BE camelCase.
+    # Settings.cs binds with JsonNamingPolicy.CamelCase + PropertyNameCaseInsensitive.
+    # Case-insensitivity does NOT bridge underscores, so a snake_case key binds to NOTHING and
+    # silently falls back to the code default. This file wrote an entirely snake_case config
+    # until 2026-08-17, so every value below was ignored on every install ever performed —
+    # including machineDefaultClientCode (the billing anchor), apiKey (sync auth) and
+    # gitHubToken (self-update). Only settings that are genuinely per-machine are emitted here;
+    # everything else is deliberately omitted so Settings.cs stays the single source of defaults.
     @"
 {
   "capture": {
-    "capture_interval_seconds": 5,
-    "capture_on_window_change": true,
-    "capture_on_keyboard_activity": true,
-    "keyboard_activity_window_ms": 500,
-    "screenshot_format": "webp",
-    "screenshot_quality": 85,
-    "max_screenshot_width": 1920,
-    "retention_days": 30,
-    "change_detection_threshold": 5,
-    "idle_timeout_seconds": 60
+    "machineDefaultClientCode": "$ClientCode"
   },
   "sync": {
-    "api_url": "https://msp.techserverpro.com/api",
-    "api_key": "",
-    "sync_interval_seconds": 60,
-    "sync_screenshots": false
-  },
-  "storage": {
-    "data_dir": "C:\\WorkCapture",
-    "screenshot_dir": "C:\\WorkCapture\\screenshots",
-    "database_path": "C:\\WorkCapture\\workcapture.db",
-    "log_path": "C:\\WorkCapture\\logs"
-  },
-  "vision": {
-    "enabled": true,
-    "service_url": "http://192.168.1.16:8001",
-    "timeout_seconds": 45,
-    "analyze_every_nth": 1,
-    "async_analysis": true
+    "apiKey": "$ApiKey"
   },
   "update": {
-    "github_token": "$Token"
+    "gitHubToken": "$Token"
   }
 }
 "@ | Set-Content "$ConfigDir\settings.json" -Encoding UTF8
-    Write-Host "Created default settings.json" -ForegroundColor Green
+    Write-Host "Created settings.json (billing anchor: $ClientCode)" -ForegroundColor Green
+} else {
+    Write-Host "settings.json already exists - leaving it alone." -ForegroundColor Yellow
+    Write-Host "  Verify it uses camelCase keys and has a machineDefaultClientCode." -ForegroundColor Gray
 }
 
 if (-not (Test-Path "$ConfigDir\clients.json")) {
