@@ -20,7 +20,19 @@ public class AppFilterConfig
     private HashSet<string>? _processLookup;
 
     /// <summary>
-    /// Check if a process name is allowed for capture
+    /// Check if a process name is allowed for capture.
+    ///
+    /// ⛔ UNKNOWN MUST NEVER MEAN BLOCKED. An empty process name used to return false, so any
+    /// frame whose foreground process could not be resolved was dropped — and the caller logs
+    /// it as "Skip: app_filtered" without counting it, so the skip counter stayed at 1 all day.
+    /// On 2026-08-18 that silently destroyed 1,228 frames on TIER3-VM: 2h23m of EasyITGuys work
+    /// that Brad only discovered by noticing the client missing from Work Review.
+    ///
+    /// WindowInfo.GetActiveWindowInfo() returns a blank record whenever GetForegroundWindow()
+    /// gives IntPtr.Zero or Process.GetProcessById throws, both of which happen in normal use
+    /// (locked session, secure desktop, a process in another session). Losing billable time to
+    /// that is never the right trade: capture the frame and let the privacy denylist — which is
+    /// metadata-only and preserves the time — decide what must not be photographed.
     /// </summary>
     public bool IsAllowed(string? processName)
     {
@@ -28,7 +40,7 @@ public class AppFilterConfig
             return true; // No filter = allow all
 
         if (string.IsNullOrEmpty(processName))
-            return false;
+            return true; // Unknown process — capture it. Never drop billable time on ignorance.
 
         // Build lookup set on first use
         _processLookup ??= new HashSet<string>(

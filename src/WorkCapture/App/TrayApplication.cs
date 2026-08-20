@@ -47,6 +47,8 @@ public class TrayApplication : IDisposable
     private Task? _captureTask;
     private int _captureCount;
     private int _skipCount;
+    // Frames the app filter refused. Surfaced in [Status] so a silent drop is impossible.
+    private int _appFilteredCount;
     private DateTime _lastStatsLog = DateTime.MinValue;
 
     public TrayApplication(Settings settings)
@@ -289,7 +291,7 @@ public class TrayApplication : IDisposable
         // Periodic diagnostic log (every 60s) - helps diagnose idle/skip issues
         if ((DateTime.Now - _lastStatsLog).TotalSeconds >= 60)
         {
-            Logger.Info($"[Status] idle={_activityMonitor.IdleSeconds:F0}s idleLimit={_settings.Capture.IdleTimeoutSeconds}s captures={_captureCount} skips={_skipCount}");
+            Logger.Info($"[Status] idle={_activityMonitor.IdleSeconds:F0}s idleLimit={_settings.Capture.IdleTimeoutSeconds}s captures={_captureCount} skips={_skipCount} app_filtered={_appFilteredCount}");
             _lastStatsLog = DateTime.Now;
 
             // Update tray color based on sync health
@@ -316,8 +318,16 @@ public class TrayApplication : IDisposable
         // Check app filter - only capture allowed apps
         if (!_appFilter.IsAllowed(windowInfo.ProcessName))
         {
-            Logger.Info($"Skip: app_filtered | proc={windowInfo.ProcessName}");
-            return; // Don't count as skip, just ignore
+            // ⛔ COUNT IT. This used to `return` with the comment "Don't count as skip, just
+            // ignore", so 1,228 frames vanished on 2026-08-18 while the status line reported
+            // skips=1 all day. A drop nobody counts is a drop nobody finds: Brad discovered it
+            // only because a client was missing from Work Review a day later. Anything this
+            // agent chooses not to capture must be visible in the counter and in the sync.
+            _appFilteredCount++;
+            _skipCount++;
+            Logger.Info($"Skip: app_filtered | proc='{windowInfo.ProcessName}' "
+                        + $"(app_filtered total={_appFilteredCount})");
+            return;
         }
 
         // Privacy denylist (password managers, banking, etc.) + heuristic sensitive content
