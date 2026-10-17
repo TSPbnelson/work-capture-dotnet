@@ -75,7 +75,26 @@ public class Database : IDisposable
                 upload_status TEXT DEFAULT 'success'
             );
 
+            -- Typed text AFTER WorkCapture.Privacy redaction. Raw keystrokes are never stored.
+            CREATE TABLE IF NOT EXISTS typed_text (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                start_time TEXT NOT NULL,
+                end_time TEXT NOT NULL,
+                process_name TEXT,
+                window_title TEXT,
+                text TEXT NOT NULL,
+                terminator TEXT,
+                redactions TEXT,
+                suppressed INTEGER DEFAULT 0,
+                suppress_reason TEXT,
+                key_count INTEGER DEFAULT 0,
+                shortcuts TEXT,
+                synced INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+
             CREATE INDEX IF NOT EXISTS idx_events_timestamp ON capture_events(timestamp);
+            CREATE INDEX IF NOT EXISTS idx_typed_text_start ON typed_text(start_time);
             CREATE INDEX IF NOT EXISTS idx_events_client ON capture_events(client_code);
             CREATE INDEX IF NOT EXISTS idx_events_synced ON capture_events(synced);
             CREATE INDEX IF NOT EXISTS idx_sessions_date ON work_sessions(date);
@@ -161,6 +180,37 @@ public class Database : IDisposable
         cmd.Parameters.AddWithValue("@mouse", evt.MouseActive ? 1 : 0);
 
         return (long)cmd.ExecuteScalar()!;
+    }
+
+    /// <summary>Store one sanitized typed-text entry. Accepts only the sanitizer's output type.</summary>
+    public void InsertTypedText(WorkCapture.Privacy.Keystrokes.SanitizedEntry e)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            INSERT INTO typed_text (
+                start_time, end_time, process_name, window_title, text, terminator,
+                redactions, suppressed, suppress_reason, key_count, shortcuts
+            ) VALUES (
+                @start, @end, @process, @title, @text, @terminator,
+                @redactions, @suppressed, @reason, @keys, @shortcuts
+            );
+        ";
+
+        cmd.Parameters.AddWithValue("@start", e.Start.ToString("O"));
+        cmd.Parameters.AddWithValue("@end", e.End.ToString("O"));
+        cmd.Parameters.AddWithValue("@process", e.ProcessName);
+        cmd.Parameters.AddWithValue("@title", e.WindowTitle);
+        cmd.Parameters.AddWithValue("@text", e.Text);
+        cmd.Parameters.AddWithValue("@terminator", e.Terminator.ToString());
+        cmd.Parameters.AddWithValue("@redactions", string.Join(",", e.Redactions));
+        cmd.Parameters.AddWithValue("@suppressed", e.Suppressed ? 1 : 0);
+        cmd.Parameters.AddWithValue("@reason", e.SuppressReason ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@keys", e.KeyCount);
+        cmd.Parameters.AddWithValue("@shortcuts", string.Join(",", e.Shortcuts));
+        cmd.ExecuteNonQuery();
     }
 
     public string? GetLastImageHash()
@@ -302,6 +352,10 @@ public class Database : IDisposable
 
             DELETE FROM sync_queue
             WHERE created_at < @cutoff AND status IN ('complete', 'failed');
+
+            -- Not uploaded yet (server endpoint pending), so age out regardless of synced.
+            DELETE FROM typed_text
+            WHERE start_time < @cutoff;
         ";
         cmd.Parameters.AddWithValue("@cutoff", cutoff);
 

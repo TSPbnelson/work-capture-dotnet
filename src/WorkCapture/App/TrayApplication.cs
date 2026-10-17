@@ -26,6 +26,7 @@ public class TrayApplication : IDisposable
     private readonly ChangeDetector _changeDetector;
     private readonly ApiSyncService _syncService;
     private readonly AppFilterConfig _appFilter;
+    private readonly KeystrokeRecorder? _keystrokeRecorder;   // null unless keystrokes.enabled
 
     // Vision components
     private readonly VisionAnalysisClient? _visionClient;
@@ -82,6 +83,13 @@ public class TrayApplication : IDisposable
         _syncService = new ApiSyncService(_db, settings.Sync);
 
         _appFilter = AppFilterConfig.Load();
+
+        if (settings.Keystrokes.Enabled)
+        {
+            _keystrokeRecorder = new KeystrokeRecorder(_db);
+            _keystrokeRecorder.Attach(_activityMonitor.Hook);
+            Logger.Info("Keystroke text capture ENABLED (redacted; remote sessions counts only)");
+        }
 
         // Initialize updater with GitHub token
         _updater = new AppUpdater(settings.Update.GitHubToken);
@@ -210,6 +218,7 @@ public class TrayApplication : IDisposable
 
         // Start activity monitoring
         _activityMonitor.Start();
+        _keystrokeRecorder?.Start();
 
         // Start sync service
         _syncService.Start();
@@ -233,7 +242,8 @@ public class TrayApplication : IDisposable
         _cts?.Cancel();
         _captureTask?.Wait(TimeSpan.FromSeconds(5));
 
-        // Stop activity monitoring
+        // Stop activity monitoring (recorder first, so it flushes open lines)
+        _keystrokeRecorder?.Stop();
         _activityMonitor.Stop();
 
         // Stop sync
@@ -291,7 +301,8 @@ public class TrayApplication : IDisposable
         // Periodic diagnostic log (every 60s) - helps diagnose idle/skip issues
         if ((DateTime.Now - _lastStatsLog).TotalSeconds >= 60)
         {
-            Logger.Info($"[Status] idle={_activityMonitor.IdleSeconds:F0}s idleLimit={_settings.Capture.IdleTimeoutSeconds}s captures={_captureCount} skips={_skipCount} app_filtered={_appFilteredCount}");
+            Logger.Info($"[Status] idle={_activityMonitor.IdleSeconds:F0}s idleLimit={_settings.Capture.IdleTimeoutSeconds}s captures={_captureCount} skips={_skipCount} app_filtered={_appFilteredCount}"
+                        + (_keystrokeRecorder != null ? $" | typed: {_keystrokeRecorder.StatusText()}" : ""));
             _lastStatsLog = DateTime.Now;
 
             // Update tray color based on sync health
@@ -696,6 +707,7 @@ public class TrayApplication : IDisposable
     private void OnPauseClick(object? sender, EventArgs e)
     {
         _paused = true;
+        _keystrokeRecorder?.SetPaused(true);
         UpdateTrayIcon(Color.Yellow, "Paused");
         Logger.Info("Capture paused");
     }
@@ -703,6 +715,7 @@ public class TrayApplication : IDisposable
     private void OnResumeClick(object? sender, EventArgs e)
     {
         _paused = false;
+        _keystrokeRecorder?.SetPaused(false);
         UpdateTrayIcon(Color.LimeGreen, "Running");
         Logger.Info("Capture resumed");
     }
@@ -855,6 +868,7 @@ public class TrayApplication : IDisposable
             icon.Dispose();
         _iconCache.Clear();
         _screenCapture.Dispose();
+        _keystrokeRecorder?.Dispose();
         _activityMonitor.Dispose();
         _clientDetector.Dispose();
         _syncService.Dispose();

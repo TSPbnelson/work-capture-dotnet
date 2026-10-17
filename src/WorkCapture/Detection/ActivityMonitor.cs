@@ -23,6 +23,9 @@ public class ActivityMonitor : IDisposable
 
     public event Action<string>? OnActivity;
 
+    /// <summary>The running global hook, so the keystroke recorder shares it instead of adding a second one.</summary>
+    public IGlobalHook Hook => _hook;
+
     public ActivityMonitor(int activityWindowMs = 500)
     {
         _activityWindow = TimeSpan.FromMilliseconds(activityWindowMs);
