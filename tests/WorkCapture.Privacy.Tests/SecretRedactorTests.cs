@@ -276,6 +276,15 @@ public class SecretRedactorTests
     }
 
     [Fact]
+    public void Existing_masks_keep_their_label()
+    {
+        var s = "New-LocalUser bob -Password [REDACTED:password_shape] and [REDACTED:prompted_secret]";
+        var r = K(s);
+        Assert.Equal(s, r.Text);
+        Assert.False(r.WasRedacted);
+    }
+
+    [Fact]
     public void Pathological_input_completes_or_fails_closed()
     {
         // 50k chars of near-miss structure: must finish quickly, and every labelled value is

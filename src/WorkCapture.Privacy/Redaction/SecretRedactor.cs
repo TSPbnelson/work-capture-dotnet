@@ -146,6 +146,7 @@ public sealed class SecretRedactor : ITextRedactor
                 var g = m.Groups["v"];
                 var (start, len) = g.Success ? (g.Index, g.Length) : (m.Index, m.Length);
                 if (len == 0) continue;
+                if (IsMask(text.Substring(start, len))) continue;   // already masked: keep its label
                 if (d.Validate != null && !d.Validate(text.Substring(start, len))) continue;
                 spans.Add((start, start + len, d.Kind, spans.Count));
             }
