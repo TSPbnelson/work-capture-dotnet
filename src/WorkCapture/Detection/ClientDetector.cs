@@ -131,12 +131,11 @@ public class ClientDetector : IDisposable
     {
         ClientMatch? bestMatch = null;
 
-        // WindowInfo stores an IP pulled from a title in Hostname, and no caller passes
-        // ipAddress, so ip_range rules never ran before v1.10.0. Route an IP to them here.
-        if (string.IsNullOrEmpty(ipAddress) && !string.IsNullOrEmpty(hostname)
-            && IPAddress.TryParse(hostname, out var parsed)
-            && parsed.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-            ipAddress = hostname;
+        // NOTE: no caller passes ipAddress, so ip_range rules do not run, and that is deliberate.
+        // Every VM's clients.json is unknown from the repo (the release ZIP ships no config and
+        // install.ps1 writes a different schema), and the built-in and repo rule sets both put
+        // TIER3 on 192.168.1.0/24, where ITDocs has assets for 13 clients. Turning IP routing on
+        // would mislabel them at 0.95 for no billing gain: the server matches IPs from ITDocs.
 
         foreach (var client in _clients)
         {

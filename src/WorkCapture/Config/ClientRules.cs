@@ -90,7 +90,8 @@ public class ClientRulesConfig
                 Code = "TIER3",
                 Rules = new List<DetectionRule>
                 {
-                    new() { Type = "ip_range", Value = "192.168.1.0/24" },
+                    // 13 clients have assets in 192.168.1.x (ITDocs, 2026-10-17): never a TIER3 signal.
+                    new() { Type = "ip_range", Value = "192.168.1.0/24", Enabled = false },
                     new() { Type = "hostname", Value = "claudellama*" },
                     new() { Type = "window_title", Value = "*MSP Portal*" },
                     new() { Type = "window_title", Value = "*MSP Autopilot*" },
