@@ -30,7 +30,10 @@ public class WindowInfoExtractor
     // Remote desktop apps
     private static readonly HashSet<string> RemoteDesktop = new(StringComparer.OrdinalIgnoreCase)
     {
-        "mstsc", "vmconnect", "VpxClient", "vmware", "VirtualBoxVM", "mRemoteNG"
+        "mstsc", "vmconnect", "VpxClient", "vmware", "VirtualBoxVM", "mRemoteNG",
+        // added v1.10.0: Windows App / AVD, ScreenConnect, Splashtop, AnyDesk, TeamViewer, RDCMan, Royal TS, RDM
+        "msrdc", "ScreenConnect.WindowsClient", "strwinclt", "AnyDesk", "TeamViewer", "RDCMan",
+        "royalts", "RemoteDesktopManager", "RemoteDesktopManager64"
     };
 
     // Hostname patterns

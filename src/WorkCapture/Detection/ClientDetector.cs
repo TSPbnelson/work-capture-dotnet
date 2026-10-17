@@ -45,10 +45,11 @@ public class ClientDetector : IDisposable
         string? defaultClientCode = null,
         string? machineDefaultClientCode = null)
     {
-        // Try ITDocs lookup first (async but we block here for simplicity)
+        // ITDocs first, from cache only: this runs on the capture tick and must never wait on
+        // the network (it used to block up to 5 s per lookup, uncached on failure).
         if (_itdocsLookup != null)
         {
-            var itdocsMatch = DetectFromITDocsAsync(windowTitle, hostname).GetAwaiter().GetResult();
+            var itdocsMatch = PeekITDocs(windowTitle, hostname);
             if (itdocsMatch != null)
             {
                 Logger.Debug($"ITDocs match: {itdocsMatch.ClientCode} ({itdocsMatch.MatchedValue})");
@@ -86,6 +87,16 @@ public class ClientDetector : IDisposable
         return DetectFromLocalRules(windowTitle, hostname, url, ipAddress, defaultClientCode, machineDefaultClientCode);
     }
 
+    private ClientMatch? PeekITDocs(string? windowTitle, string? hostname)
+    {
+        ClientMatch? match = null;
+        if (!string.IsNullOrEmpty(windowTitle))
+            match = _itdocsLookup!.PeekByWindowTitle(windowTitle);
+        if (match == null && !string.IsNullOrEmpty(hostname))
+            match = _itdocsLookup!.PeekByHostname(hostname);
+        return match;
+    }
+
     private async Task<ClientMatch?> DetectFromITDocsAsync(string? windowTitle, string? hostname)
     {
         if (_itdocsLookup == null)
@@ -119,6 +130,13 @@ public class ClientDetector : IDisposable
         string? machineDefaultClientCode = null)
     {
         ClientMatch? bestMatch = null;
+
+        // WindowInfo stores an IP pulled from a title in Hostname, and no caller passes
+        // ipAddress, so ip_range rules never ran before v1.10.0. Route an IP to them here.
+        if (string.IsNullOrEmpty(ipAddress) && !string.IsNullOrEmpty(hostname)
+            && IPAddress.TryParse(hostname, out var parsed)
+            && parsed.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+            ipAddress = hostname;
 
         foreach (var client in _clients)
         {
@@ -191,6 +209,7 @@ public class ClientDetector : IDisposable
 
         foreach (var rule in client.Rules)
         {
+            if (!rule.Enabled) continue;
             double confidence = 0;
             string matchedValue = "";
 

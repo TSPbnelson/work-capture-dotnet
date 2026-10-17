@@ -28,6 +28,12 @@ public class TrayApplication : IDisposable
     private readonly AppFilterConfig _appFilter;
     private readonly KeystrokeRecorder? _keystrokeRecorder;   // null unless keystrokes.enabled
 
+    // Screen text (title, URL, UI Automation text, OCR) is scrubbed of credentials, tokens, card
+    // numbers etc. BEFORE it reaches SQLite, the sidecar, the vision call or the upload. General
+    // mode only: no password-shape rule, so hostnames and model numbers survive as client evidence.
+    private static readonly WorkCapture.Privacy.Redaction.SecretRedactor ScreenRedactor = new();
+    private int _screenRedactions;
+
     // Vision components
     private readonly VisionAnalysisClient? _visionClient;
     private readonly StepSummaryAccumulator _stepAccumulator;
@@ -301,7 +307,7 @@ public class TrayApplication : IDisposable
         // Periodic diagnostic log (every 60s) - helps diagnose idle/skip issues
         if ((DateTime.Now - _lastStatsLog).TotalSeconds >= 60)
         {
-            Logger.Info($"[Status] idle={_activityMonitor.IdleSeconds:F0}s idleLimit={_settings.Capture.IdleTimeoutSeconds}s captures={_captureCount} skips={_skipCount} app_filtered={_appFilteredCount}"
+            Logger.Info($"[Status] idle={_activityMonitor.IdleSeconds:F0}s idleLimit={_settings.Capture.IdleTimeoutSeconds}s captures={_captureCount} skips={_skipCount} app_filtered={_appFilteredCount} screen_redactions={_screenRedactions}"
                         + (_keystrokeRecorder != null ? $" | typed: {_keystrokeRecorder.StatusText()}" : ""));
             _lastStatsLog = DateTime.Now;
 
@@ -325,6 +331,7 @@ public class TrayApplication : IDisposable
 
         // Get window info
         var windowInfo = _windowExtractor.GetActiveWindowInfo();
+        ScrubScreenText(windowInfo);
 
         // Check app filter - only capture allowed apps
         if (!_appFilter.IsAllowed(windowInfo.ProcessName))
@@ -442,6 +449,7 @@ public class TrayApplication : IDisposable
         // names, so always OCR'ing only adds coverage, never degrades accuracy. On-device,
         // codec-free, on the live frame before SaveFromMemory disposes it.
         windowInfo.OcrText = OcrExtractor.Recognize(memCapture.Image);
+        ScrubScreenText(windowInfo);
 
         // Save the screenshot to disk
         string? screenshotPath = null;
@@ -526,6 +534,26 @@ public class TrayApplication : IDisposable
     }
 
     /// <summary>
+    /// Mask secrets in every screen-text field in place. Idempotent, so calling it again after
+    /// enrichment only touches the newly filled fields. Fails closed per field.
+    /// </summary>
+    private void ScrubScreenText(WindowInfo info)
+    {
+        info.Title = Scrub(info.Title) ?? "";
+        info.Url = Scrub(info.Url);
+        info.UiText = Scrub(info.UiText);
+        info.OcrText = Scrub(info.OcrText);
+
+        string? Scrub(string? text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            var r = ScreenRedactor.Redact(text, WorkCapture.Privacy.Redaction.RedactionMode.General);
+            if (r.WasRedacted) Interlocked.Add(ref _screenRedactions, r.Kinds.Count);
+            return r.Text;
+        }
+    }
+
+    /// <summary>
     /// Write a JSON sidecar ({screenshot}.json) holding the captured text signals, so the
     /// later disk-based upload and the server-side deterministic matcher can use them.
     /// Best-effort: never throws into the capture loop.
@@ -606,6 +634,7 @@ public class TrayApplication : IDisposable
         if (_paused) return;
 
         var windowInfo = _windowExtractor.GetActiveWindowInfo();
+        ScrubScreenText(windowInfo);
         var clientMatch = _clientDetector.Detect(
             windowTitle: windowInfo.Title,
             hostname: windowInfo.Hostname,
