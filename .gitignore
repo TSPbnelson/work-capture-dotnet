@@ -115,3 +115,6 @@ src/WorkCapture/config/settings.local.json
 
 # Publish output
 publish/
+
+# Six Labors license key: lives in the SIXLABORS_LICENSE GitHub secret, never in the repo
+sixlabors.lic

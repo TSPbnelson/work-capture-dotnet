@@ -33,7 +33,7 @@
     <PackageReference Include="System.Text.Json" Version="9.0.1" />
 
     <!-- Image processing for perceptual hashing -->
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="4.1.2" />
 
     <!-- HTTP client for API sync -->
     <PackageReference Include="System.Net.Http.Json" Version="9.0.1" />
@@ -42,17 +42,6 @@
     <PackageReference Include="SharpHook" Version="5.3.1" />
   </ItemGroup>
 
-  <ItemGroup>
-    <!-- ImageSharp advisories fixed only in 4.1.2 (no 3.x fix; 4.x needs a Six Labors license key
-         to build). Not reachable here: the agent's only decode is the PNG System.Drawing just made
-         from its own screen grab, and it never touches TIFF, ICC profiles or HistogramEqualization.
-         Remove these when moving to 4.x, or if the agent ever decodes an image it didn't create. -->
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j3p4-wp97-rph4" /> <!-- HistogramEqualization on float TIFF -->
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j9gm-c75j-xc9q" /> <!-- TIFF CCITT T4 encoder overflow -->
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-jjfr-hcj7-qf5w" /> <!-- TIFF CCITT T6 encoder overflow -->
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-gwg2-r3hj-4w44" /> <!-- ICC CLUT allocation -->
-    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-wmxv-xphr-5c9g" /> <!-- BigTIFF IFD loop -->
-  </ItemGroup>
 
   <ItemGroup>
     <!-- UseWPF + the Windows SDK target alter the SDK's implicit global-usings set (System.IO,

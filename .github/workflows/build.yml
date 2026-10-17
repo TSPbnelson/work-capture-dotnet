@@ -23,6 +23,16 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
+    # ImageSharp 4.x refuses to build in Release without a Six Labors license (Community, expires 2028-01-15).
+    - name: Write Six Labors license
+      env:
+        SIXLABORS_LICENSE: ${{ secrets.SIXLABORS_LICENSE }}
+      run: |
+        if (-not $env:SIXLABORS_LICENSE) { throw "SIXLABORS_LICENSE secret is not set" }
+        $lic = Join-Path $env:RUNNER_TEMP 'sixlabors.lic'
+        Set-Content -Path $lic -Value $env:SIXLABORS_LICENSE -NoNewline
+        "SixLaborsLicenseFile=$lic" >> $env:GITHUB_ENV
+
     - name: Restore dependencies
       run: dotnet restore
 
