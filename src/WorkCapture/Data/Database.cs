@@ -93,6 +93,24 @@ public class Database : IDisposable
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             );
 
+            -- Activity stream: input counts per 5 s bucket (idle stretches merged). Minutes are
+            -- computed from this server-side, not from screenshot cadence.
+            CREATE TABLE IF NOT EXISTS activity_buckets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                start_time TEXT NOT NULL,
+                duration_s INTEGER NOT NULL,
+                keys INTEGER DEFAULT 0,
+                clicks INTEGER DEFAULT 0,
+                scrolls INTEGER DEFAULT 0,
+                mouse_moved INTEGER DEFAULT 0,
+                last_input_age_ms INTEGER,
+                process_name TEXT,
+                window_title TEXT,
+                session_state TEXT,
+                synced INTEGER DEFAULT 0
+            );
+            CREATE INDEX IF NOT EXISTS idx_activity_synced ON activity_buckets(synced, id);
+
             CREATE INDEX IF NOT EXISTS idx_events_timestamp ON capture_events(timestamp);
             CREATE INDEX IF NOT EXISTS idx_typed_text_start ON typed_text(start_time);
             CREATE INDEX IF NOT EXISTS idx_events_client ON capture_events(client_code);
@@ -182,6 +200,84 @@ public class Database : IDisposable
         return (long)cmd.ExecuteScalar()!;
     }
 
+    public void InsertActivityBucket(WorkCapture.Detection.ActivityBucket b)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            INSERT INTO activity_buckets (
+                start_time, duration_s, keys, clicks, scrolls, mouse_moved,
+                last_input_age_ms, process_name, window_title, session_state
+            ) VALUES (
+                @start, @dur, @keys, @clicks, @scrolls, @moved,
+                @age, @process, @title, @state
+            );
+        ";
+        cmd.Parameters.AddWithValue("@start", b.Start.ToString("O"));
+        cmd.Parameters.AddWithValue("@dur", b.DurationSeconds);
+        cmd.Parameters.AddWithValue("@keys", b.Keys);
+        cmd.Parameters.AddWithValue("@clicks", b.Clicks);
+        cmd.Parameters.AddWithValue("@scrolls", b.Scrolls);
+        cmd.Parameters.AddWithValue("@moved", b.MouseMoved ? 1 : 0);
+        cmd.Parameters.AddWithValue("@age", b.LastInputAgeMs);
+        cmd.Parameters.AddWithValue("@process", b.ProcessName);
+        cmd.Parameters.AddWithValue("@title", b.WindowTitle);
+        cmd.Parameters.AddWithValue("@state", b.SessionState);
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// Oldest unsynced rows of activity_buckets or typed_text as JSON-ready dictionaries
+    /// (column name → value), plus their ids for <see cref="MarkRowsSynced"/>.
+    /// </summary>
+    public (List<long> Ids, List<Dictionary<string, object?>> Rows) GetUnsyncedRows(string table, int limit)
+    {
+        if (table is not ("activity_buckets" or "typed_text"))
+            throw new ArgumentException($"Unknown table {table}");
+
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = $"SELECT * FROM {table} WHERE synced = 0 ORDER BY id LIMIT @limit";
+        cmd.Parameters.AddWithValue("@limit", limit);
+
+        var ids = new List<long>();
+        var rows = new List<Dictionary<string, object?>>();
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            var row = new Dictionary<string, object?>();
+            for (int i = 0; i < reader.FieldCount; i++)
+            {
+                var name = reader.GetName(i);
+                if (name is "synced" or "created_at") continue;
+                row[name] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+            }
+            ids.Add(reader.GetInt64(0));
+            rows.Add(row);
+        }
+        return (ids, rows);
+    }
+
+    public void MarkRowsSynced(string table, IReadOnlyList<long> ids)
+    {
+        if (table is not ("activity_buckets" or "typed_text"))
+            throw new ArgumentException($"Unknown table {table}");
+        if (ids.Count == 0) return;
+
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+        using var tx = conn.BeginTransaction();
+        using var cmd = conn.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = $"UPDATE {table} SET synced = 1 WHERE id = @id";
+        var p = cmd.Parameters.Add("@id", SqliteType.Integer);
+        foreach (var id in ids) { p.Value = id; cmd.ExecuteNonQuery(); }
+        tx.Commit();
+    }
+
     /// <summary>Store one sanitized typed-text entry. Accepts only the sanitizer's output type.</summary>
     public void InsertTypedText(WorkCapture.Privacy.Keystrokes.SanitizedEntry e)
     {
@@ -211,6 +307,21 @@ public class Database : IDisposable
         cmd.Parameters.AddWithValue("@keys", e.KeyCount);
         cmd.Parameters.AddWithValue("@shortcuts", string.Join(",", e.Shortcuts));
         cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>Client code and window title recorded for a screenshot, on any date.</summary>
+    public (string? ClientCode, string? WindowTitle) GetScreenshotMetadata(string screenshotPath)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT COALESCE(client_code, vision_client_code), window_title
+            FROM capture_events WHERE screenshot_path = @path LIMIT 1";
+        cmd.Parameters.AddWithValue("@path", screenshotPath);
+        using var r = cmd.ExecuteReader();
+        if (!r.Read()) return (null, null);
+        return (r.IsDBNull(0) ? null : r.GetString(0), r.IsDBNull(1) ? null : r.GetString(1));
     }
 
     public string? GetLastImageHash()
@@ -353,8 +464,11 @@ public class Database : IDisposable
             DELETE FROM sync_queue
             WHERE created_at < @cutoff AND status IN ('complete', 'failed');
 
-            -- Not uploaded yet (server endpoint pending), so age out regardless of synced.
+            -- Age out regardless of synced: an upload outage must not grow these forever.
             DELETE FROM typed_text
+            WHERE start_time < @cutoff;
+
+            DELETE FROM activity_buckets
             WHERE start_time < @cutoff;
         ";
         cmd.Parameters.AddWithValue("@cutoff", cutoff);
@@ -594,7 +708,11 @@ public class Database : IDisposable
     /// <summary>
     /// Get unuploaded screenshots for a specific date
     /// </summary>
-    public List<string> GetUnuploadedScreenshots(DateTime date)
+    /// <summary>
+    /// Unuploaded screenshots, oldest first. With no date, EVERY retained day is included:
+    /// until v1.10.0 only today was ever uploaded, so a backlog left at midnight was stranded.
+    /// </summary>
+    public List<string> GetUnuploadedScreenshots(DateTime? date = null, int limit = 500)
     {
         using var conn = new SqliteConnection(_connectionString);
         conn.Open();
@@ -602,14 +720,16 @@ public class Database : IDisposable
         using var cmd = conn.CreateCommand();
         cmd.CommandText = @"
             SELECT screenshot_path FROM capture_events
-            WHERE date(timestamp, 'localtime') = @date
+            WHERE (@date IS NULL OR date(timestamp, 'localtime') = @date)
               AND screenshot_path IS NOT NULL
               AND screenshot_path NOT IN (
                   SELECT screenshot_path FROM screenshot_uploads WHERE upload_status = 'success'
               )
             ORDER BY timestamp ASC
+            LIMIT @limit
         ";
-        cmd.Parameters.AddWithValue("@date", date.ToString("yyyy-MM-dd"));
+        cmd.Parameters.AddWithValue("@date", date?.ToString("yyyy-MM-dd") ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@limit", limit);
 
         var paths = new List<string>();
         using var reader = cmd.ExecuteReader();

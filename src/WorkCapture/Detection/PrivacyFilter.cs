@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using WorkCapture.Config;
 
 namespace WorkCapture.Detection;
@@ -9,12 +10,14 @@ public class PrivacyFilter
 {
     private readonly PrivacyRulesConfig _rules;
 
-    private static readonly HashSet<string> SensitiveKeywords = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "password", "login", "signin", "sign-in",
-        "bank", "account", "credit card",
-        "ssn", "social security"
-    };
+    // Whole words only (v1.10.0). Until then this was a substring match that also contained
+    // "login", "signin", "sign-in" and "account", so Entra "Sign-in logs", any "Account" page and
+    // even afterbankruptcy.com ("bank") became metadata-only: no screenshot, and recorded at most
+    // hourly. Billing time no longer depends on screenshots (activity stream), but the evidence
+    // of WHO and WHAT does. Credentials typed or shown are handled by WorkCapture.Privacy.
+    private static readonly Regex SensitiveWords = new(
+        @"\b(password|bank|credit card|ssn|social security)\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public PrivacyFilter(PrivacyRulesConfig rules)
     {
@@ -37,8 +40,6 @@ public class PrivacyFilter
     /// </summary>
     public bool IsSensitiveContent(string? windowTitle, string? url)
     {
-        var text = $"{windowTitle ?? ""} {url ?? ""}".ToLowerInvariant();
-
-        return SensitiveKeywords.Any(keyword => text.Contains(keyword));
+        return SensitiveWords.IsMatch($"{windowTitle ?? ""} {url ?? ""}");
     }
 }

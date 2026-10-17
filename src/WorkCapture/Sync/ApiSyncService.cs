@@ -21,6 +21,16 @@ public class ApiSyncService : IDisposable
     private int _consecutiveSyncErrors;
     private int _totalSynced;
 
+    // Activity stream + typed text upload. Until the server endpoint is deployed it answers 404;
+    // back off an hour then, instead of hitting it every sync interval.
+    private DateTime _activityPausedUntil = DateTime.MinValue;
+    private long _activityRowsSent, _typedRowsSent;
+    private static readonly string AgentVersion =
+        (System.Reflection.Assembly.GetExecutingAssembly()
+            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .FirstOrDefault() as System.Reflection.AssemblyInformationalVersionAttribute)
+        ?.InformationalVersion.Split('+')[0] ?? "?";
+
     public ApiSyncService(Database db, SyncSettings settings)
     {
         _db = db;
@@ -129,6 +139,8 @@ public class ApiSyncService : IDisposable
         {
             await UploadTodaysScreenshots();
         }
+
+        await UploadActivityStream();
 
         _lastSync = DateTime.Now;
 
@@ -299,20 +311,20 @@ public class ApiSyncService : IDisposable
     }
 
     /// <summary>
-    /// Upload today's unuploaded screenshots
+    /// Upload unuploaded screenshots from EVERY retained day, oldest first, up to 500 per pass.
+    /// (Name kept from when it only did today: that stranded any backlog left at midnight.)
     /// </summary>
     private async Task UploadTodaysScreenshots()
     {
-        var today = DateTime.Today;
-        var unuploadedPaths = _db.GetUnuploadedScreenshots(today);
+        var unuploadedPaths = _db.GetUnuploadedScreenshots(date: null, limit: 500);
 
         if (!unuploadedPaths.Any())
         {
-            Logger.Debug("No screenshots to upload for today");
+            Logger.Debug("No screenshots to upload");
             return;
         }
 
-        Logger.Info($"Uploading {unuploadedPaths.Count} screenshots for {today:yyyy-MM-dd}");
+        Logger.Info($"Uploading {unuploadedPaths.Count} screenshots (oldest first, all retained days)");
 
         int uploaded = 0;
         int failed = 0;
@@ -423,11 +435,63 @@ public class ApiSyncService : IDisposable
     /// </summary>
     private (string? clientCode, string? windowTitle) ExtractMetadataFromPath(string screenshotPath)
     {
-        var events = _db.GetEventsForDate(DateTime.Today);
-        var evt = events.FirstOrDefault(e => e.ScreenshotPath == screenshotPath);
-        var clientCode = evt?.ClientCode ?? evt?.VisionClientCode;
-        var windowTitle = evt?.WindowTitle;
-        return (clientCode, windowTitle);
+        // Any date, not just today: backlog frames need their metadata too.
+        return _db.GetScreenshotMetadata(screenshotPath);
+    }
+
+    /// <summary>
+    /// POST unsynced activity buckets and typed text to work-capture/activity, oldest first,
+    /// in batches. Rows are marked synced only after a 2xx, so nothing is lost on failure.
+    /// </summary>
+    private async Task UploadActivityStream()
+    {
+        if (DateTime.Now < _activityPausedUntil) return;
+
+        for (int batch = 0; batch < 20; batch++)
+        {
+            var (bucketIds, buckets) = _db.GetUnsyncedRows("activity_buckets", 1000);
+            var (typedIds, typed) = _db.GetUnsyncedRows("typed_text", 500);
+            if (buckets.Count == 0 && typed.Count == 0) return;
+
+            var payload = new
+            {
+                machine_name = Environment.MachineName,
+                agent_version = AgentVersion,
+                buckets,
+                typed,
+            };
+
+            HttpResponseMessage response;
+            try
+            {
+                response = await _client.PostAsJsonAsync("work-capture/activity", payload);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning($"Activity upload failed: {ex.Message}");
+                return;
+            }
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _activityPausedUntil = DateTime.Now.AddHours(1);
+                Logger.Info("Activity endpoint not deployed yet (404); data kept locally, retry in 1 h");
+                return;
+            }
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Logger.Warning($"Activity upload failed: {(int)response.StatusCode} {error}");
+                return;
+            }
+
+            _db.MarkRowsSynced("activity_buckets", bucketIds);
+            _db.MarkRowsSynced("typed_text", typedIds);
+            _activityRowsSent += bucketIds.Count;
+            _typedRowsSent += typedIds.Count;
+            Logger.Info($"Activity upload: {bucketIds.Count} buckets, {typedIds.Count} typed rows " +
+                        $"(total {_activityRowsSent}/{_typedRowsSent})");
+        }
     }
 
     /// <summary>
