@@ -295,6 +295,17 @@ public sealed class KeystrokeRecorder : IDisposable
         private static readonly string[] RemoteTitleMarkers =
             { "Remote Desktop Connection", " - ScreenConnect", "ScreenConnect", "AnyDesk", "TeamViewer", "Splashtop" };
 
+        private static readonly HashSet<string> BrowserProcesses = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "chrome", "msedge", "firefox", "brave", "opera", "iexplore",
+        };
+
+        // The ScreenConnect web admin page (session list + its sign-in) is an ordinary website:
+        // password-box detection works there, so it gets the normal rules. Only this exact page is
+        // exempt. Real sessions are titled "7068 - Partner-01 - ScreenConnect - Connected" (1,414
+        // frames checked 2026-10-18) and any browser-based viewer stays counts-only.
+        private const string ScreenConnectAdminTitle = "ScreenConnect Remote Support Software";
+
         private static readonly HashSet<string> TerminalProcesses = new(StringComparer.OrdinalIgnoreCase)
         {
             "cmd", "powershell", "pwsh", "WindowsTerminal", "OpenConsole", "conhost", "putty", "kitty",
@@ -320,8 +331,11 @@ public sealed class KeystrokeRecorder : IDisposable
             var threadId = GetWindowThreadProcessId(hwnd, out var pid);
             var process = ProcessName(pid);
 
+            bool screenConnectAdminPage = BrowserProcesses.Contains(process)
+                && title.StartsWith(ScreenConnectAdminTitle, StringComparison.OrdinalIgnoreCase);
             bool remote = RemoteProcesses.Contains(process)
-                          || RemoteTitleMarkers.Any(m => title.Contains(m, StringComparison.OrdinalIgnoreCase));
+                          || (!screenConnectAdminPage
+                              && RemoteTitleMarkers.Any(m => title.Contains(m, StringComparison.OrdinalIgnoreCase)));
 
             _cached = new InputContext(
                 ProcessName: process,
