@@ -231,6 +231,35 @@ public class KeystrokeSanitizerTests
     }
 
     [Fact]
+    public void First_connect_ssh_host_key_answer_does_not_use_up_the_mask()
+    {
+        // Reproduces the TIER3-VM test of 2026-10-18: yes/no host-key prompt, then the password.
+        var s = new KeystrokeSanitizer();
+        var e = Type(s, Terminal, "ssh bnelson@192.168.1.3\nyes\nsdfdsfsdfsd\nls -la /etc\n");
+        Assert.Equal(new[] { "ssh bnelson@192.168.1.3", "yes", "[REDACTED:prompted_secret]", "ls -la /etc" },
+                     e.Select(x => x.Text).ToArray());
+    }
+
+    [Fact]
+    public void Password_retries_after_ssh_are_all_masked_then_commands_resume()
+    {
+        var s = new KeystrokeSanitizer();
+        var e = Type(s, Terminal, "ssh root@host\ny\nwrongpass\nrightpass\nsystemctl status nginx\nuptime -p\n");
+        Assert.Equal(new[] { "ssh root@host", "y", "[REDACTED:prompted_secret]", "[REDACTED:prompted_secret]",
+                             "systemctl status nginx", "uptime -p" },
+                     e.Select(x => x.Text).ToArray());
+    }
+
+    [Fact]
+    public void Prompt_window_is_bounded_to_three_one_word_lines()
+    {
+        var s = new KeystrokeSanitizer();
+        var e = Type(s, Terminal, "sudo -i\naaaa\nbbbb\ncccc\nls\n");
+        Assert.Equal("ls", e.Last().Text);
+        Assert.Equal(3, e.Count(x => x.Text == "[REDACTED:prompted_secret]"));
+    }
+
+    [Fact]
     public void Tab_then_enter_single_word_is_masked_even_if_lowercase()
     {
         var s = new KeystrokeSanitizer();

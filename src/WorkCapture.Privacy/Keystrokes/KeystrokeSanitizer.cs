@@ -35,6 +35,10 @@ public sealed class KeystrokeSanitizer
         + @"|-credential\b|--ask-(become-)?pass\b|\s-p\s*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, RxTimeout);
 
+    // Answers to "continue connecting (yes/no)?" and similar: kept, and they don't use up the
+    // prompted-secret window (that is exactly how the first-connect ssh password leaked, 2026-10-18).
+    private static readonly Regex ConfirmAnswer = new(@"^(y|n|yes|no)$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, RxTimeout);
+
     private static readonly Regex SlashCommand = new(@"^[a-z]{3,}(/[a-z?]{1,10})+$", RegexOptions.CultureInvariant, RxTimeout);
 
     private readonly ContextGate _gate;
@@ -51,7 +55,8 @@ public sealed class KeystrokeSanitizer
     private DateTime _suppressedStart, _suppressedEnd;
 
     // Credential-context state, reset on every window change
-    private int _maskNextLines;
+    private int _maskNextLines;        // prompted-secret window: one-word lines still to mask
+    private bool _promptFirstPending;  // the first real answer after the command is masked whatever its shape
     private Terminator? _previousTerminator;
 
     public long TotalKeys { get; private set; }
@@ -82,6 +87,7 @@ public sealed class KeystrokeSanitizer
             {
                 EmitAll(Terminator.WindowChange, output);
                 _maskNextLines = 0;
+                _promptFirstPending = false;
                 _previousTerminator = null;
             }
             else if (decision != _decision)
@@ -146,10 +152,18 @@ public sealed class KeystrokeSanitizer
         bool singleToken = trimmed.Length > 0 && !trimmed.Any(char.IsWhiteSpace);
         bool submitted = line.Terminator is Terminator.Enter or Terminator.Tab;
 
-        if (_maskNextLines > 0 && line.Terminator == Terminator.Enter && trimmed.Length > 0)
+        bool inPromptWindow = _maskNextLines > 0 && line.Terminator == Terminator.Enter && trimmed.Length > 0;
+        if (inPromptWindow && !ConfirmAnswer.IsMatch(trimmed) && (_promptFirstPending || singleToken))
         {
+            // After ssh/sudo/runas...: the first non-yes/no answer, then any further one-word lines
+            // (a retried password) up to the window size. A multi-word line ends the window below.
             _maskNextLines--;
+            _promptFirstPending = false;
             (text, kinds) = Whole("prompted_secret");
+        }
+        else if (inPromptWindow && ConfirmAnswer.IsMatch(trimmed))
+        {
+            (text, kinds) = (line.Text, Array.Empty<string>());   // yes/no: keep, window stays open
         }
         else if (_previousTerminator == Terminator.Tab && line.Terminator == Terminator.Enter && singleToken)
         {
@@ -161,10 +175,14 @@ public sealed class KeystrokeSanitizer
         }
         else
         {
+            if (inPromptWindow) { _maskNextLines = 0; _promptFirstPending = false; }   // a real command: window over
             var r = _redactor.Redact(line.Text, RedactionMode.Keystrokes);
             (text, kinds) = (r.Text, r.Kinds);
             if (line.Terminator == Terminator.Enter && SecretPromptingCommand.IsMatch(line.Text))
-                _maskNextLines = 1;
+            {
+                _maskNextLines = 3;
+                _promptFirstPending = true;
+            }
         }
 
         _previousTerminator = line.Terminator;
