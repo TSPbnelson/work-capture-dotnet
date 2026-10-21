@@ -316,7 +316,12 @@ public class ApiSyncService : IDisposable
     /// </summary>
     private async Task UploadTodaysScreenshots()
     {
-        var unuploadedPaths = _db.GetUnuploadedScreenshots(date: null, limit: 500);
+        // Today first, so live billing never waits behind a backlog; then the backlog, oldest first.
+        var unuploadedPaths = _db.GetUnuploadedScreenshots(date: DateTime.Today, limit: 500);
+        if (unuploadedPaths.Count < 500)
+            unuploadedPaths = unuploadedPaths
+                .Concat(_db.GetUnuploadedScreenshots(date: null, limit: 500 - unuploadedPaths.Count))
+                .Distinct().ToList();
 
         if (!unuploadedPaths.Any())
         {
@@ -328,6 +333,7 @@ public class ApiSyncService : IDisposable
 
         int uploaded = 0;
         int failed = 0;
+        int missing = 0;
 
         foreach (var path in unuploadedPaths)
         {
@@ -335,7 +341,8 @@ public class ApiSyncService : IDisposable
             {
                 if (!File.Exists(path))
                 {
-                    Logger.Warning($"Screenshot not found: {path}");
+                    _db.MarkScreenshotMissing(path);   // leaves the queue for good
+                    missing++;
                     continue;
                 }
 
@@ -349,9 +356,9 @@ public class ApiSyncService : IDisposable
             }
         }
 
-        if (uploaded > 0)
+        if (uploaded > 0 || failed > 0 || missing > 0)
         {
-            Logger.Info($"Screenshot upload complete: {uploaded} uploaded, {failed} failed");
+            Logger.Info($"Screenshot upload: {uploaded} uploaded, {failed} failed, {missing} missing on disk (marked, won't retry)");
         }
     }
 

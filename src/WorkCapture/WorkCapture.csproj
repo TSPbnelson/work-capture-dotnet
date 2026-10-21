@@ -12,8 +12,8 @@
     <!-- <ApplicationIcon>Resources\icon.ico</ApplicationIcon> -->
     <AssemblyName>WorkCapture</AssemblyName>
     <RootNamespace>WorkCapture</RootNamespace>
-    <Version>1.9.99</Version>
-    <AssemblyVersion>1.9.99</AssemblyVersion>
+    <Version>1.9.100</Version>
+    <AssemblyVersion>1.9.100</AssemblyVersion>
     <Company>Tier3 MSP</Company>
     <Product>Work Capture</Product>
     <Description>Real-time work tracking and screenshot capture for MSP billing</Description>

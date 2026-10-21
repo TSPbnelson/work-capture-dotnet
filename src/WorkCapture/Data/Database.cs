@@ -686,6 +686,24 @@ public class Database : IDisposable
     }
 
     /// <summary>
+    /// The file is gone (deleted by retention, or never written). Record that, so it leaves the
+    /// upload queue for good. ⛔ Without this, 500 dead rows at the head of the oldest-first queue
+    /// blocked every newer upload on TIER3-VM from 2026-10-18 (Kage 128699 on 10-20 billed 0).
+    /// </summary>
+    public void MarkScreenshotMissing(string screenshotPath)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            INSERT OR REPLACE INTO screenshot_uploads (screenshot_path, file_size_bytes, uploaded_at, upload_status)
+            VALUES (@path, 0, @now, 'missing')";
+        cmd.Parameters.AddWithValue("@path", screenshotPath);
+        cmd.Parameters.AddWithValue("@now", DateTime.Now.ToString("O"));
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>
     /// Mark a screenshot as uploaded
     /// </summary>
     public void MarkScreenshotUploaded(string screenshotPath, long fileSizeBytes, string? clientCode)
@@ -712,7 +730,7 @@ public class Database : IDisposable
     /// Unuploaded screenshots, oldest first. With no date, EVERY retained day is included:
     /// until v1.10.0 only today was ever uploaded, so a backlog left at midnight was stranded.
     /// </summary>
-    public List<string> GetUnuploadedScreenshots(DateTime? date = null, int limit = 500)
+    public List<string> GetUnuploadedScreenshots(DateTime? date = null, int limit = 500, int sinceDays = 31)
     {
         using var conn = new SqliteConnection(_connectionString);
         conn.Open();
@@ -721,14 +739,18 @@ public class Database : IDisposable
         cmd.CommandText = @"
             SELECT screenshot_path FROM capture_events
             WHERE (@date IS NULL OR date(timestamp, 'localtime') = @date)
+              AND timestamp >= @since
               AND screenshot_path IS NOT NULL
               AND screenshot_path NOT IN (
-                  SELECT screenshot_path FROM screenshot_uploads WHERE upload_status = 'success'
+                  SELECT screenshot_path FROM screenshot_uploads
+                  WHERE upload_status IN ('success', 'missing')
               )
             ORDER BY timestamp ASC
             LIMIT @limit
         ";
         cmd.Parameters.AddWithValue("@date", date?.ToString("yyyy-MM-dd") ?? (object)DBNull.Value);
+        // Files older than the agent's own retention are already deleted; never ask for them.
+        cmd.Parameters.AddWithValue("@since", DateTime.Now.AddDays(-sinceDays).ToString("O"));
         cmd.Parameters.AddWithValue("@limit", limit);
 
         var paths = new List<string>();
