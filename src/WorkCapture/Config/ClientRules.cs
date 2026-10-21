@@ -90,7 +90,8 @@ public class ClientRulesConfig
                 Code = "TIER3",
                 Rules = new List<DetectionRule>
                 {
-                    new() { Type = "ip_range", Value = "192.168.1.0/24" },
+                    // 13 clients have assets in 192.168.1.x (ITDocs, 2026-10-17): never a TIER3 signal.
+                    new() { Type = "ip_range", Value = "192.168.1.0/24", Enabled = false },
                     new() { Type = "hostname", Value = "claudellama*" },
                     new() { Type = "window_title", Value = "*MSP Portal*" },
                     new() { Type = "window_title", Value = "*MSP Autopilot*" },
@@ -217,8 +218,17 @@ public class DetectionRule
     /// <summary>Rule type: ip_range, hostname, window_title, url</summary>
     public string Type { get; set; } = "";
 
-    /// <summary>Pattern or value to match</summary>
+    /// <summary>
+    /// Pattern or value to match. Two styles are accepted:
+    ///   regex — anything containing ".*" or a backslash, e.g. ".*Snyder.*", ".*stephensnyder\.com.*", "J-.*"
+    ///   glob  — everything else, e.g. "*Snyder*", "claudellama"
+    /// Until v1.10.0 every value was treated as a glob, so the regex-style rules (41 of 50 in
+    /// clients.json) compiled to "^\..*Snyder\..*$" and could never match a real title.
+    /// </summary>
     public string Value { get; set; } = "";
+
+    /// <summary>False keeps a rule in the file but never evaluates it.</summary>
+    public bool Enabled { get; set; } = true;
 
     /// <summary>Compiled regex (cached)</summary>
     [JsonIgnore]
@@ -237,13 +247,23 @@ public class DetectionRule
         }
         else
         {
-            // Convert glob pattern to regex
-            var pattern = "^" + Regex.Escape(Value)
-                .Replace("\\*", ".*")
-                .Replace("\\?", ".") + "$";
-            CompiledRegex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            var pattern = IsRegexStyle(Value)
+                ? "^(?:" + Value + ")$"
+                : "^" + Regex.Escape(Value).Replace("\\*", ".*").Replace("\\?", ".") + "$";   // glob
+            try
+            {
+                CompiledRegex = new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.Compiled,
+                                          TimeSpan.FromMilliseconds(100));
+            }
+            catch (ArgumentException ex)
+            {
+                CompiledRegex = null;   // a bad pattern disables only this rule
+                Logger.Warning($"Client rule '{Value}' is not a valid pattern, skipped: {ex.Message}");
+            }
         }
     }
+
+    private static bool IsRegexStyle(string value) => value.Contains(".*") || value.Contains('\\');
 
     private static (IPAddress, IPAddress)? ParseCidr(string cidr)
     {

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Platform-neutral on purpose: the redaction engine has no Win32/WinForms dependency, so its
+       unit tests run anywhere (including claudellama's Linux .NET SDK container) without a
+       Windows build agent. The Windows-only hook adapter lives in the WorkCapture app. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>WorkCapture.Privacy</RootNamespace>
+    <AssemblyName>WorkCapture.Privacy</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="WorkCapture.Privacy.Tests" />
+  </ItemGroup>
+
+</Project>

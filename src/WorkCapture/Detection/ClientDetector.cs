@@ -45,10 +45,11 @@ public class ClientDetector : IDisposable
         string? defaultClientCode = null,
         string? machineDefaultClientCode = null)
     {
-        // Try ITDocs lookup first (async but we block here for simplicity)
+        // ITDocs first, from cache only: this runs on the capture tick and must never wait on
+        // the network (it used to block up to 5 s per lookup, uncached on failure).
         if (_itdocsLookup != null)
         {
-            var itdocsMatch = DetectFromITDocsAsync(windowTitle, hostname).GetAwaiter().GetResult();
+            var itdocsMatch = PeekITDocs(windowTitle, hostname);
             if (itdocsMatch != null)
             {
                 Logger.Debug($"ITDocs match: {itdocsMatch.ClientCode} ({itdocsMatch.MatchedValue})");
@@ -86,6 +87,16 @@ public class ClientDetector : IDisposable
         return DetectFromLocalRules(windowTitle, hostname, url, ipAddress, defaultClientCode, machineDefaultClientCode);
     }
 
+    private ClientMatch? PeekITDocs(string? windowTitle, string? hostname)
+    {
+        ClientMatch? match = null;
+        if (!string.IsNullOrEmpty(windowTitle))
+            match = _itdocsLookup!.PeekByWindowTitle(windowTitle);
+        if (match == null && !string.IsNullOrEmpty(hostname))
+            match = _itdocsLookup!.PeekByHostname(hostname);
+        return match;
+    }
+
     private async Task<ClientMatch?> DetectFromITDocsAsync(string? windowTitle, string? hostname)
     {
         if (_itdocsLookup == null)
@@ -119,6 +130,12 @@ public class ClientDetector : IDisposable
         string? machineDefaultClientCode = null)
     {
         ClientMatch? bestMatch = null;
+
+        // NOTE: no caller passes ipAddress, so ip_range rules do not run, and that is deliberate.
+        // Every VM's clients.json is unknown from the repo (the release ZIP ships no config and
+        // install.ps1 writes a different schema), and the built-in and repo rule sets both put
+        // TIER3 on 192.168.1.0/24, where ITDocs has assets for 13 clients. Turning IP routing on
+        // would mislabel them at 0.95 for no billing gain: the server matches IPs from ITDocs.
 
         foreach (var client in _clients)
         {
@@ -191,6 +208,7 @@ public class ClientDetector : IDisposable
 
         foreach (var rule in client.Rules)
         {
+            if (!rule.Enabled) continue;
             double confidence = 0;
             string matchedValue = "";
 

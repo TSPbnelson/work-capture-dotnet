@@ -13,6 +13,7 @@ public class Settings
     public StorageSettings Storage { get; set; } = new();
     public VisionSettings Vision { get; set; } = new();
     public UpdateSettings Update { get; set; } = new();
+    public KeystrokeSettings Keystrokes { get; set; } = new();
 
     private static readonly string DataConfigDir = @"C:\WorkCapture\config";
     private static readonly string AppConfigDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config");
@@ -230,6 +231,17 @@ public class VisionSettings
 
     /// <summary>Run analysis asynchronously (don't block capture loop)</summary>
     public bool AsyncAnalysis { get; set; } = true;
+}
+
+/// <summary>
+/// Typed-text capture (for work summaries). Every line passes the WorkCapture.Privacy
+/// redaction filter before it is stored; text typed into RDP / ScreenConnect / other remote
+/// sessions is never kept (key counts only), and that is not configurable.
+/// </summary>
+public class KeystrokeSettings
+{
+    /// <summary>Off by default. Turn on per VM with "keystrokes": { "enabled": true }.</summary>
+    public bool Enabled { get; set; } = false;
 }
 
 /// <summary>

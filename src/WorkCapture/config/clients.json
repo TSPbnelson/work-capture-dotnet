@@ -34,7 +34,7 @@
       "name": "Tier3 MSP",
       "code": "TIER3",
       "rules": [
-        { "type": "ip_range", "value": "192.168.1.0/24" },
+        { "type": "ip_range", "value": "192.168.1.0/24", "enabled": false },
         { "type": "hostname", "value": "claudellama" },
         { "type": "hostname", "value": "rproxy" },
         { "type": "window_title", "value": ".*MSP.*Autopilot.*" },

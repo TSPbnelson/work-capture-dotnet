@@ -26,6 +26,14 @@ public class TrayApplication : IDisposable
     private readonly ChangeDetector _changeDetector;
     private readonly ApiSyncService _syncService;
     private readonly AppFilterConfig _appFilter;
+    private readonly KeystrokeRecorder? _keystrokeRecorder;   // null unless keystrokes.enabled
+    private readonly ActivityRecorder _activityRecorder;      // 5 s activity stream (always on)
+
+    // Screen text (title, URL, UI Automation text, OCR) is scrubbed of credentials, tokens, card
+    // numbers etc. BEFORE it reaches SQLite, the sidecar, the vision call or the upload. General
+    // mode only: no password-shape rule, so hostnames and model numbers survive as client evidence.
+    private static readonly WorkCapture.Privacy.Redaction.SecretRedactor ScreenRedactor = new();
+    private int _screenRedactions;
 
     // Vision components
     private readonly VisionAnalysisClient? _visionClient;
@@ -49,6 +57,8 @@ public class TrayApplication : IDisposable
     private int _skipCount;
     // Frames the app filter refused. Surfaced in [Status] so a silent drop is impossible.
     private int _appFilteredCount;
+    private int _idleSkipCount;       // ticks skipped because the user was idle
+    private int _metadataOnlyCount;   // privacy/sensitive frames recorded without a screenshot
     private DateTime _lastStatsLog = DateTime.MinValue;
 
     public TrayApplication(Settings settings)
@@ -82,6 +92,16 @@ public class TrayApplication : IDisposable
         _syncService = new ApiSyncService(_db, settings.Sync);
 
         _appFilter = AppFilterConfig.Load();
+
+        _activityRecorder = new ActivityRecorder(_db, () => _activityMonitor.IdleSeconds);
+        _activityRecorder.Attach(_activityMonitor.Hook);
+
+        if (settings.Keystrokes.Enabled)
+        {
+            _keystrokeRecorder = new KeystrokeRecorder(_db);
+            _keystrokeRecorder.Attach(_activityMonitor.Hook);
+            Logger.Info("Keystroke text capture ENABLED (redacted; remote sessions counts only)");
+        }
 
         // Initialize updater with GitHub token
         _updater = new AppUpdater(settings.Update.GitHubToken);
@@ -210,6 +230,8 @@ public class TrayApplication : IDisposable
 
         // Start activity monitoring
         _activityMonitor.Start();
+        _activityRecorder.Start();
+        _keystrokeRecorder?.Start();
 
         // Start sync service
         _syncService.Start();
@@ -233,7 +255,9 @@ public class TrayApplication : IDisposable
         _cts?.Cancel();
         _captureTask?.Wait(TimeSpan.FromSeconds(5));
 
-        // Stop activity monitoring
+        // Stop activity monitoring (recorder first, so it flushes open lines)
+        _keystrokeRecorder?.Stop();
+        _activityRecorder.Stop();
         _activityMonitor.Stop();
 
         // Stop sync
@@ -291,7 +315,9 @@ public class TrayApplication : IDisposable
         // Periodic diagnostic log (every 60s) - helps diagnose idle/skip issues
         if ((DateTime.Now - _lastStatsLog).TotalSeconds >= 60)
         {
-            Logger.Info($"[Status] idle={_activityMonitor.IdleSeconds:F0}s idleLimit={_settings.Capture.IdleTimeoutSeconds}s captures={_captureCount} skips={_skipCount} app_filtered={_appFilteredCount}");
+            Logger.Info($"[Status] idle={_activityMonitor.IdleSeconds:F0}s idleLimit={_settings.Capture.IdleTimeoutSeconds}s captures={_captureCount} skips={_skipCount} app_filtered={_appFilteredCount} idle_skips={_idleSkipCount} metadata_only={_metadataOnlyCount} screen_redactions={_screenRedactions}"
+                        + $" | activity: {_activityRecorder.StatusText()}"
+                        + (_keystrokeRecorder != null ? $" | typed: {_keystrokeRecorder.StatusText()}" : ""));
             _lastStatsLog = DateTime.Now;
 
             // Update tray color based on sync health
@@ -309,11 +335,13 @@ public class TrayApplication : IDisposable
         if (idleTimeout > 0 && _activityMonitor.IdleSeconds > idleTimeout)
         {
             Logger.Debug($"Idle ({_activityMonitor.IdleSeconds:F0}s), skipping capture");
+            _idleSkipCount++;
             return;
         }
 
         // Get window info
         var windowInfo = _windowExtractor.GetActiveWindowInfo();
+        ScrubScreenText(windowInfo);
 
         // Check app filter - only capture allowed apps
         if (!_appFilter.IsAllowed(windowInfo.ProcessName))
@@ -382,6 +410,7 @@ public class TrayApplication : IDisposable
             _db.InsertCaptureEvent(metaEvt);
             _changeDetector.RecordCapture(windowInfo.Title, windowInfo.ProcessName, null);
             _captureCount++;
+            _metadataOnlyCount++;
 
             Logger.Debug($"Captured: metadata_only | {windowInfo.ProcessName} | " +
                          $"Client: {clientMatchMeta?.ClientCode ?? "Unknown"} | Reason: {metaReason}");
@@ -431,6 +460,7 @@ public class TrayApplication : IDisposable
         // names, so always OCR'ing only adds coverage, never degrades accuracy. On-device,
         // codec-free, on the live frame before SaveFromMemory disposes it.
         windowInfo.OcrText = OcrExtractor.Recognize(memCapture.Image);
+        ScrubScreenText(windowInfo);
 
         // Save the screenshot to disk
         string? screenshotPath = null;
@@ -515,6 +545,26 @@ public class TrayApplication : IDisposable
     }
 
     /// <summary>
+    /// Mask secrets in every screen-text field in place. Idempotent, so calling it again after
+    /// enrichment only touches the newly filled fields. Fails closed per field.
+    /// </summary>
+    private void ScrubScreenText(WindowInfo info)
+    {
+        info.Title = Scrub(info.Title) ?? "";
+        info.Url = Scrub(info.Url);
+        info.UiText = Scrub(info.UiText);
+        info.OcrText = Scrub(info.OcrText);
+
+        string? Scrub(string? text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            var r = ScreenRedactor.Redact(text, WorkCapture.Privacy.Redaction.RedactionMode.General);
+            if (r.WasRedacted) Interlocked.Add(ref _screenRedactions, r.Kinds.Count);
+            return r.Text;
+        }
+    }
+
+    /// <summary>
     /// Write a JSON sidecar ({screenshot}.json) holding the captured text signals, so the
     /// later disk-based upload and the server-side deterministic matcher can use them.
     /// Best-effort: never throws into the capture loop.
@@ -595,6 +645,7 @@ public class TrayApplication : IDisposable
         if (_paused) return;
 
         var windowInfo = _windowExtractor.GetActiveWindowInfo();
+        ScrubScreenText(windowInfo);
         var clientMatch = _clientDetector.Detect(
             windowTitle: windowInfo.Title,
             hostname: windowInfo.Hostname,
@@ -696,6 +747,8 @@ public class TrayApplication : IDisposable
     private void OnPauseClick(object? sender, EventArgs e)
     {
         _paused = true;
+        _keystrokeRecorder?.SetPaused(true);
+        _activityRecorder.Stop();
         UpdateTrayIcon(Color.Yellow, "Paused");
         Logger.Info("Capture paused");
     }
@@ -703,6 +756,8 @@ public class TrayApplication : IDisposable
     private void OnResumeClick(object? sender, EventArgs e)
     {
         _paused = false;
+        _keystrokeRecorder?.SetPaused(false);
+        _activityRecorder.Start();
         UpdateTrayIcon(Color.LimeGreen, "Running");
         Logger.Info("Capture resumed");
     }
@@ -855,6 +910,8 @@ public class TrayApplication : IDisposable
             icon.Dispose();
         _iconCache.Clear();
         _screenCapture.Dispose();
+        _keystrokeRecorder?.Dispose();
+        _activityRecorder.Dispose();
         _activityMonitor.Dispose();
         _clientDetector.Dispose();
         _syncService.Dispose();

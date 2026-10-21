@@ -12,8 +12,8 @@
     <!-- <ApplicationIcon>Resources\icon.ico</ApplicationIcon> -->
     <AssemblyName>WorkCapture</AssemblyName>
     <RootNamespace>WorkCapture</RootNamespace>
-    <Version>1.9.8</Version>
-    <AssemblyVersion>1.9.8</AssemblyVersion>
+    <Version>1.9.101</Version>
+    <AssemblyVersion>1.9.101</AssemblyVersion>
     <Company>Tier3 MSP</Company>
     <Product>Work Capture</Product>
     <Description>Real-time work tracking and screenshot capture for MSP billing</Description>
@@ -42,6 +42,11 @@
     <PackageReference Include="SharpHook" Version="5.3.1" />
   </ItemGroup>
 
+
+  <ItemGroup>
+    <!-- Redaction engine + keystroke sanitizer (platform-neutral, unit-tested on Linux) -->
+    <ProjectReference Include="..\WorkCapture.Privacy\WorkCapture.Privacy.csproj" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- UseWPF + the Windows SDK target alter the SDK's implicit global-usings set (System.IO,
