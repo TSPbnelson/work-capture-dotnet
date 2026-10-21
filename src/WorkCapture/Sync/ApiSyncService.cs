@@ -25,6 +25,9 @@ public class ApiSyncService : IDisposable
     // back off an hour then, instead of hitting it every sync interval.
     private DateTime _activityPausedUntil = DateTime.MinValue;
     private long _activityRowsSent, _typedRowsSent;
+    // Last screenshot pass, reported with the activity upload (upload_queue).
+    private int _lastPassUploaded, _lastPassFailed, _lastPassMissing;
+    private DateTime? _lastScreenshotUploadOk;
     private static readonly string AgentVersion =
         (System.Reflection.Assembly.GetExecutingAssembly()
             .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
@@ -323,6 +326,7 @@ public class ApiSyncService : IDisposable
                 .Concat(_db.GetUnuploadedScreenshots(date: null, limit: 500 - unuploadedPaths.Count))
                 .Distinct().ToList();
 
+        _lastPassUploaded = _lastPassFailed = _lastPassMissing = 0;
         if (!unuploadedPaths.Any())
         {
             Logger.Debug("No screenshots to upload");
@@ -356,6 +360,8 @@ public class ApiSyncService : IDisposable
             }
         }
 
+        (_lastPassUploaded, _lastPassFailed, _lastPassMissing) = (uploaded, failed, missing);
+        if (uploaded > 0) _lastScreenshotUploadOk = DateTime.Now;
         if (uploaded > 0 || failed > 0 || missing > 0)
         {
             Logger.Info($"Screenshot upload: {uploaded} uploaded, {failed} failed, {missing} missing on disk (marked, won't retry)");
@@ -460,12 +466,30 @@ public class ApiSyncService : IDisposable
             var (typedIds, typed) = _db.GetUnsyncedRows("typed_text", 500);
             if (buckets.Count == 0 && typed.Count == 0) return;
 
+            object? queue = null;
+            try
+            {
+                var (pendingToday, pendingTotal, oldest) = _db.GetUploadQueueStats();
+                queue = new
+                {
+                    pending_today = pendingToday,
+                    pending_total = pendingTotal,
+                    oldest_pending = oldest,
+                    last_pass_uploaded = _lastPassUploaded,
+                    last_pass_failed = _lastPassFailed,
+                    last_pass_missing = _lastPassMissing,
+                    last_upload_ok_at = _lastScreenshotUploadOk?.ToString("O"),
+                };
+            }
+            catch (Exception ex) { Logger.Debug($"Queue stats failed: {ex.Message}"); }
+
             var payload = new
             {
                 machine_name = Environment.MachineName,
                 agent_version = AgentVersion,
                 buckets,
                 typed,
+                upload_queue = queue,
             };
 
             HttpResponseMessage response;

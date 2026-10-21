@@ -686,6 +686,28 @@ public class Database : IDisposable
     }
 
     /// <summary>
+    /// Upload-queue health, sent to the server with every activity upload so a stuck queue is
+    /// visible within the hour (the 10-18..10-21 TIER3-VM jam was invisible from the server).
+    /// </summary>
+    public (int PendingToday, int PendingTotal, string? OldestPending) GetUploadQueueStats(int sinceDays = 31)
+    {
+        using var conn = new SqliteConnection(_connectionString);
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+            SELECT COUNT(*) FILTER (WHERE date(timestamp, 'localtime') = date('now', 'localtime')),
+                   COUNT(*), MIN(timestamp)
+            FROM capture_events
+            WHERE timestamp >= @since AND screenshot_path IS NOT NULL
+              AND screenshot_path NOT IN (
+                  SELECT screenshot_path FROM screenshot_uploads WHERE upload_status IN ('success', 'missing'))";
+        cmd.Parameters.AddWithValue("@since", DateTime.Now.AddDays(-sinceDays).ToString("O"));
+        using var r = cmd.ExecuteReader();
+        r.Read();
+        return (r.GetInt32(0), r.GetInt32(1), r.IsDBNull(2) ? null : r.GetString(2));
+    }
+
+    /// <summary>
     /// The file is gone (deleted by retention, or never written). Record that, so it leaves the
     /// upload queue for good. ⛔ Without this, 500 dead rows at the head of the oldest-first queue
     /// blocked every newer upload on TIER3-VM from 2026-10-18 (Kage 128699 on 10-20 billed 0).
